@@ -95,7 +95,39 @@ def scorer(my_play, outcome):
     return score
 
 
-day = 2
+def day3():
+    data_pack = import_data(day, dev_env)
+    sum_the_priorities = 0
+    for rucksack in data_pack:
+        pouch_item_count = int(len(rucksack) / 2)
+        dupe_item = find_the_dupe_item([rucksack[:pouch_item_count], rucksack[pouch_item_count:]])
+        if dupe_item:
+            sum_the_priorities += get_priority(char=dupe_item)
+    print("Ag:", sum_the_priorities)
+
+    sum_the_priorities = 0
+    for elf_group_number in range(1, int((len(data_pack) / 3) + 1)):
+        elf_group_set = elf_group_number * 3
+        elf_group_packs = [data_pack[elf_group_set - 3], data_pack[elf_group_set - 2],
+                           data_pack[elf_group_set - 1]]
+        dupe_item = find_the_dupe_item(elf_group_packs)
+        sum_the_priorities += get_priority(char=dupe_item)
+    print("Au:", sum_the_priorities)
+
+
+def find_the_dupe_item(list_of_contents):
+    for candidate_char in list_of_contents[0]:
+        matching_list_members = [i for i in list_of_contents[1:] if candidate_char in i]
+        if len(matching_list_members) == len(list_of_contents) - 1:  # Everyone matched
+            return candidate_char
+
+
+def get_priority(char):
+    offset = -96 if char == char.lower() else -38
+    return ord(char) + offset
+
+
+day = 3
 dev_env = False
 
 execute()
