@@ -127,7 +127,24 @@ def get_priority(char):
     return ord(char) + offset
 
 
-day = 3
+def day4():
+    data_pack = import_data(day, dev_env)
+    total_encompasing_pairs = 0
+    partial_encompasing_pairs = 0
+    for elf_pairing in data_pack:
+        range1 = list(range(int(elf_pairing.split(",")[0].split("-")[0]),
+                            int(elf_pairing.split(",")[0].split("-")[1]) + 1))
+        range2 = list(range(int(elf_pairing.split(",")[1].split("-")[0]),
+                            int(elf_pairing.split(",")[1].split("-")[1]) + 1))
+        if all(elem in range1 for elem in range2) or all(elem in range2 for elem in range1):
+            total_encompasing_pairs += 1
+        if any(elem in range1 for elem in range2) or any(elem in range2 for elem in range1):
+            partial_encompasing_pairs += 1
+    print("Ag:", total_encompasing_pairs)
+    print("Au:", partial_encompasing_pairs)
+
+
+day = 4
 dev_env = False
 
 execute()
