@@ -1,14 +1,20 @@
+import collections
+
+
 def execute():
     globals()[f"day{day}"]()
 
 
-def import_data(day: int, dev_env: bool = True):
+def import_data(day: int, dev_env: bool = True, strip: bool = True):
     folder = 'DEV' if dev_env else "PROD"
     data_path = f"{folder}/{day}.txt"
     data_pack = []
     f = open(data_path)
     for line in f:
-        data_pack.append(line.strip())
+        if strip:
+            data_pack.append(line.strip())
+        else:
+            data_pack.append(line)
     return data_pack
 
 
@@ -144,7 +150,145 @@ def day4():
     print("Au:", partial_encompasing_pairs)
 
 
-day = 4
+def day5():
+    cratemover9000()
+    cratemover9001()
+
+
+def cratemover9000():
+    stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9, move_list = (
+        pull_and_format_data())
+    for move in move_list:
+        how_many, from_stax, to_stax = parse_the_move_instructions(move_instruction=move)
+        for num_times in range(how_many):
+            leaving, arriving = translate_the_to_from_variables(
+                stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9, from_stax, to_stax)
+            arriving.appendleft(leaving.popleft())
+
+    answer = format_the_answer(
+        stax_list=[stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9])
+    print("Ag:", answer)
+
+
+def cratemover9001():
+    stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9, move_list = (
+        pull_and_format_data())
+    for move in move_list:
+        how_many, from_stax, to_stax = parse_the_move_instructions(move_instruction=move)
+        leaving, arriving = translate_the_to_from_variables(
+            stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9, from_stax, to_stax)
+        big_claw = []
+        for num_times in range(how_many):
+            take_off = leaving.popleft()
+            big_claw.append(take_off)
+        big_claw.reverse()
+        for item in big_claw:
+            arriving.appendleft(item)
+
+    answer = format_the_answer(
+        stax_list=[stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9])
+    print("Au:", answer)
+
+
+def pull_and_format_data():
+    data_pack = import_data(day, dev_env, strip=False)
+    stax1 = collections.deque()
+    stax2 = collections.deque()
+    stax3 = collections.deque()
+    stax4 = collections.deque()
+    stax5 = collections.deque()
+    stax6 = collections.deque()
+    stax7 = collections.deque()
+    stax8 = collections.deque()
+    stax9 = collections.deque()
+    move_list = []
+
+    for line in data_pack:
+        if 'move' in line:
+            move_list.append(line.strip())
+        if "[" in line:
+            if len(line) > 1 and line[1] != " ":
+                stax1.append(line[1])
+            if len(line) > 5 and line[5] != " ":
+                stax2.append(line[5])
+            if len(line) > 9 and line[9] != " ":
+                stax3.append(line[9])
+            if len(line) > 13 and line[13] != " ":
+                stax4.append(line[13])
+            if len(line) > 17 and line[17] != " ":
+                stax5.append(line[17])
+            if len(line) > 21 and line[21] != " ":
+                stax6.append(line[21])
+            if len(line) > 25 and line[25] != " ":
+                stax7.append(line[25])
+            if len(line) > 29 and line[29] != " ":
+                stax8.append(line[29])
+            if len(line) > 33 and line[33] != " ":
+                stax9.append(line[33])
+
+    return stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9, move_list
+
+
+def format_the_answer(stax_list):
+    answer = ""
+    for item in stax_list:
+        try:
+            answer += item[0]
+        except IndexError:
+            pass
+    return answer
+
+
+def translate_the_to_from_variables(
+        stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9, from_stax, to_stax):
+    if from_stax == 1:
+        leaving = stax1
+    if to_stax == 1:
+        arriving = stax1
+    if from_stax == 2:
+        leaving = stax2
+    if to_stax == 2:
+        arriving = stax2
+    if from_stax == 3:
+        leaving = stax3
+    if to_stax == 3:
+        arriving = stax3
+    if from_stax == 4:
+        leaving = stax4
+    if to_stax == 4:
+        arriving = stax4
+    if from_stax == 5:
+        leaving = stax5
+    if to_stax == 5:
+        arriving = stax5
+    if from_stax == 6:
+        leaving = stax6
+    if to_stax == 6:
+        arriving = stax6
+    if from_stax == 7:
+        leaving = stax7
+    if to_stax == 7:
+        arriving = stax7
+    if from_stax == 8:
+        leaving = stax8
+    if to_stax == 8:
+        arriving = stax8
+    if from_stax == 9:
+        leaving = stax9
+    if to_stax == 9:
+        arriving = stax9
+    return leaving, arriving
+
+
+def parse_the_move_instructions(move_instruction: str):
+    moves = [int(s) for s in move_instruction.split() if s.isdigit()]
+    how_many = moves[0]
+    from_stax = moves[1]
+    to_stax = moves[2]
+    return how_many, from_stax, to_stax
+
+
+day = 5
 dev_env = False
 
 execute()
