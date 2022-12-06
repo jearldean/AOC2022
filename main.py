@@ -288,7 +288,23 @@ def parse_the_move_instructions(move_instruction: str):
     return how_many, from_stax, to_stax
 
 
-day = 5
+def day6():
+    data_pack = import_data(day, dev_env)
+    datastream_buffer = data_pack[0]
+    print("Ag:", find_the_starter(datastream_buffer, distinct_characters=4))
+    print("Au:", find_the_starter(datastream_buffer, distinct_characters=14))
+
+
+def find_the_starter(datastream_buffer: str, distinct_characters: int):
+    first_marker = distinct_characters - 1
+    for ii in range(distinct_characters, len(datastream_buffer) + 1):
+        first_marker += 1
+        uniques = set(datastream_buffer[ii - distinct_characters:ii])
+        if len(uniques) == distinct_characters:  # all are unique, no dupes
+            return first_marker
+
+
+day = 6
 dev_env = False
 
 execute()
