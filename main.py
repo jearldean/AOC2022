@@ -1,4 +1,5 @@
 import collections
+from anytree import Node, RenderTree
 
 
 def execute():
@@ -304,7 +305,73 @@ def find_the_starter(datastream_buffer: str, distinct_characters: int):
             return first_marker
 
 
-day = 6
+def day7():
+    # Thank you, anytree!
+    data_pack = import_data(day, dev_env)
+    at_most_this_big = 100000
+    total_disk = 70000000
+    required_for_update = 30000000
+    root = Node("root", size=0)
+    location_now = root
+    nodes = dict()
+    nodes[root.name] = root
+    for jj in data_pack:
+        if jj == "$ ls":
+            # Do nothing. There are really only 5 conditions to handle, not 6.
+            continue
+        if "$ cd " in jj:  # This is ONLY for updating location_now.
+            cd_where = jj.replace("$ cd ", "")
+            if cd_where == "/":
+                location_now = root
+            elif cd_where == "..":
+                location_now = location_now.parent
+            else:
+                unique_dict_key = cd_where + str(location_now)
+                location_now = nodes[unique_dict_key]
+        else:  # This is ONLY for creating new nodes.
+            first, name = jj.split(" ")
+            if first == "dir":
+                size = 0
+            else:
+                size = int(first)
+            unique_dict_key = name + str(location_now)
+            node_count_before = len(nodes)
+            nodes[unique_dict_key] = Node(name, parent=location_now, size=size)
+            node_count_after = len(nodes)
+            if node_count_before + 1 != node_count_after:
+                # This held me up a long time.
+                print("You got dupes!", name, location_now, size)
+
+    # Proud of this pretty picture:
+    for pre, fill, node in RenderTree(root):
+        print("%s%s" % (pre, node.name), node.size)
+
+    total_smalls = 0
+    folder_sizes = {}
+    total_sizes_list = []
+    for node in nodes:
+        total_size = 0
+        for child in nodes[node].descendants:
+            total_size += child.size
+        total_sizes_list.append(total_size)
+        if total_size:
+            folder_sizes[node] = total_size
+        if total_size <= at_most_this_big:
+            total_smalls += total_size
+    # print(folder_sizes)
+    print("Ag:", total_smalls)
+
+    total_sizes_list.sort()
+    largest_outside_dir = total_sizes_list[-1]
+    unused_space = total_disk - largest_outside_dir
+    space_needed = required_for_update - unused_space
+    for one_size in total_sizes_list:
+        if one_size > space_needed:
+            print("Au:", one_size)
+            break
+
+
+day = 7
 dev_env = False
 
 execute()
