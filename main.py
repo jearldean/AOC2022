@@ -19,6 +19,29 @@ def import_data(day: int, dev_env: bool = True, strip: bool = True):
     return data_pack
 
 
+def color_me(string, color):
+    terminal_colors = {"Black": "\u001b[30",
+                       "Red": "\u001b[31m",
+                       "Green": "\u001b[32m",
+                       "Yellow": "\u001b[33m",
+                       "Blue": "\u001b[34m",
+                       "Magenta": "\u001b[35m",
+                       "Cyan": "\u001b[36m",
+                       "White": "\u001b[37m",
+                       "Reset": "\u001b[0m"}
+    reset = terminal_colors["Reset"]
+    return f"{terminal_colors[color]}{string}{reset}"
+
+
+def error_checker(value, dev_should_be, prod_should_be):
+    error_message = ""
+    if dev_env and value != dev_should_be:
+        error_message = color_me(f"\t{value} should be {dev_should_be}.", "Red")
+    if not dev_env and value != prod_should_be:
+        error_message = color_me(f"\t{value} should be {prod_should_be}.", "Red")
+    return error_message
+
+
 def day1():
     data_pack = import_data(day, dev_env)
     elf_stores = []
@@ -107,7 +130,8 @@ def day3():
     sum_the_priorities = 0
     for rucksack in data_pack:
         pouch_item_count = int(len(rucksack) / 2)
-        dupe_item = find_the_dupe_item([rucksack[:pouch_item_count], rucksack[pouch_item_count:]])
+        dupe_item = find_the_dupe_item(
+            [rucksack[:pouch_item_count], rucksack[pouch_item_count:]])
         if dupe_item:
             sum_the_priorities += get_priority(char=dupe_item)
     print("Ag:", sum_the_priorities)
@@ -163,7 +187,8 @@ def cratemover9000():
         how_many, from_stax, to_stax = parse_the_move_instructions(move_instruction=move)
         for num_times in range(how_many):
             leaving, arriving = translate_the_to_from_variables(
-                stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9, from_stax, to_stax)
+                stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9, from_stax,
+                to_stax)
             arriving.appendleft(leaving.popleft())
 
     answer = format_the_answer(
@@ -326,7 +351,7 @@ def day7():
             elif cd_where == "..":
                 location_now = location_now.parent
             else:
-                unique_dict_key = cd_where + str(location_now)
+                unique_dict_key = get_unique_name(location_now=location_now, name=cd_where)
                 location_now = nodes[unique_dict_key]
         else:  # This is ONLY for creating new nodes.
             first, name = jj.split(" ")
@@ -334,7 +359,7 @@ def day7():
                 size = 0
             else:
                 size = int(first)
-            unique_dict_key = name + str(location_now)
+            unique_dict_key = get_unique_name(location_now=location_now, name=name)
             node_count_before = len(nodes)
             nodes[unique_dict_key] = Node(name, parent=location_now, size=size)
             node_count_after = len(nodes)
@@ -342,9 +367,22 @@ def day7():
                 # This held me up a long time.
                 print("You got dupes!", name, location_now, size)
 
+    # for pre, fill, node in RenderTree(root):
+    #    print("%s%s" % (pre, node.name), node.size)
+
     # Proud of this pretty picture:
     for pre, fill, node in RenderTree(root):
-        print("%s%s" % (pre, node.name), node.size)
+        if node.size:
+            prefix = color_me("File:", "Magenta")
+            display_size = f"\t{prefix} {node.size}"
+        else:
+            prefix = color_me("Dir:", "Cyan")
+            dir_total = 0
+            for child in node.descendants:
+                dir_total += child.size
+            display_size = f"\t{prefix} {dir_total}"
+        print("%s%s" % (pre, node.name), display_size)
+    print()
 
     total_smalls = 0
     folder_sizes = {}
@@ -358,8 +396,11 @@ def day7():
             folder_sizes[node] = total_size
         if total_size <= at_most_this_big:
             total_smalls += total_size
+
+    error_message = error_checker(total_smalls, 95437, 1667443)
+    print("Ag:", total_smalls, error_message)
+
     # print(folder_sizes)
-    print("Ag:", total_smalls)
 
     total_sizes_list.sort()
     largest_outside_dir = total_sizes_list[-1]
@@ -367,11 +408,20 @@ def day7():
     space_needed = required_for_update - unused_space
     for one_size in total_sizes_list:
         if one_size > space_needed:
-            print("Au:", one_size)
+            error_message = error_checker(one_size, 24933642, 8998590)
+            print("Au:", one_size, error_message)
             break
 
 
+def get_unique_name(location_now: Node, name: str):
+    unique_dict_key = ""
+    for i in location_now.ancestors:
+        unique_dict_key += i.name + "/"
+    unique_dict_key += name + "/" + location_now.name
+    return unique_dict_key
+
+
 day = 7
-dev_env = False
+dev_env = True
 
 execute()
