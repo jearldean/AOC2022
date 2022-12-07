@@ -1,6 +1,9 @@
 import collections
 from anytree import Node, RenderTree
 
+day = 1
+dev_env = True
+
 
 def execute():
     globals()[f"day{day}"]()
@@ -30,7 +33,15 @@ def color_me(string, color):
                        "White": "\u001b[37m",
                        "Reset": "\u001b[0m"}
     reset = terminal_colors["Reset"]
-    return f"{terminal_colors[color]}{string}{reset}"
+    error_color = terminal_colors["Red"]
+    try:
+        return f"{terminal_colors[color]}{string}{reset}"
+    except KeyError:
+        dict_keys_ = terminal_colors.keys()
+        allowed_colors = {str(key) for key in dict_keys_}
+        print(f"{error_color}Oops, I don't have the color '{color}' in my databanks. "
+              f"I only have {allowed_colors}{reset}")
+        return string
 
 
 def error_checker(value, dev_should_be, prod_should_be):
@@ -44,32 +55,42 @@ def error_checker(value, dev_should_be, prod_should_be):
 
 def day1():
     data_pack = import_data(day, dev_env)
+    answer_units = "rucksack calories"
     elf_stores = []
-    running_total = 0
 
+    running_total = 0
     for food_unit in data_pack:
         if not food_unit:
             elf_stores.append(running_total)
-            running_total = 0
+            running_total = 0  # Reset it for the next food pack.
         else:
             running_total += int(food_unit)
+    elf_stores.append(running_total)  # Tack on the last guy.
 
     elf_stores.sort(reverse=True)
-    print(elf_stores[0])
-    print(elf_stores[0] + elf_stores[1] + elf_stores[2])
+    silver_star_answer = elf_stores[0]
+    print("Ag*:", silver_star_answer, answer_units,
+          error_checker(silver_star_answer, 24000, 67622))
+    gold_star_answer = elf_stores[0] + elf_stores[1] + elf_stores[2]
+    print("Au*:", gold_star_answer, answer_units,
+          error_checker(gold_star_answer, 45000, 201491))
 
 
 def day2():
     # https://adventofcode.com/2022/day/2
     data_pack = import_data(day, dev_env)
+    answer_units = "rock-paper-scissors score"
     overall_score1 = 0
     overall_score2 = 0
     for i in data_pack:
         first, second = i.split(" ")
         overall_score1 += rock_paper_scissors1(hers=first, mine=second)
         overall_score2 += rock_paper_scissors2(hers=first, outcome_code=second)
-    print(overall_score1)
-    print(overall_score2)
+
+    print("Ag*:", overall_score1, answer_units,
+          error_checker(overall_score1, 15, 10994))
+    print("Au*:", overall_score2, answer_units,
+          error_checker(overall_score2, 12, 12526))
 
 
 def rock_paper_scissors1(hers, mine):
@@ -127,6 +148,7 @@ def scorer(my_play, outcome):
 
 def day3():
     data_pack = import_data(day, dev_env)
+    answer_units = "rucksack item count"
     sum_the_priorities = 0
     for rucksack in data_pack:
         pouch_item_count = int(len(rucksack) / 2)
@@ -134,7 +156,8 @@ def day3():
             [rucksack[:pouch_item_count], rucksack[pouch_item_count:]])
         if dupe_item:
             sum_the_priorities += get_priority(char=dupe_item)
-    print("Ag:", sum_the_priorities)
+    print("Ag*:", sum_the_priorities, answer_units,
+          error_checker(sum_the_priorities, 157, 8053))
 
     sum_the_priorities = 0
     for elf_group_number in range(1, int((len(data_pack) / 3) + 1)):
@@ -143,7 +166,8 @@ def day3():
                            data_pack[elf_group_set - 1]]
         dupe_item = find_the_dupe_item(elf_group_packs)
         sum_the_priorities += get_priority(char=dupe_item)
-    print("Au:", sum_the_priorities)
+    print("Au*:", sum_the_priorities, answer_units,
+          error_checker(sum_the_priorities, 70, 2425))
 
 
 def find_the_dupe_item(list_of_contents):
@@ -160,6 +184,7 @@ def get_priority(char):
 
 def day4():
     data_pack = import_data(day, dev_env)
+    answer_units = "overlapping pairs"
     total_encompasing_pairs = 0
     partial_encompasing_pairs = 0
     for elf_pairing in data_pack:
@@ -171,13 +196,21 @@ def day4():
             total_encompasing_pairs += 1
         if any(elem in range1 for elem in range2) or any(elem in range2 for elem in range1):
             partial_encompasing_pairs += 1
-    print("Ag:", total_encompasing_pairs)
-    print("Au:", partial_encompasing_pairs)
+
+    print("Ag*:", total_encompasing_pairs, answer_units,
+          error_checker(total_encompasing_pairs, 2, 602))
+    print("Au*:", partial_encompasing_pairs, answer_units,
+          error_checker(partial_encompasing_pairs, 4, 891))
 
 
 def day5():
-    cratemover9000()
-    cratemover9001()
+    answer_units = "top boxes"
+    silver_star_answer = cratemover9000()
+    gold_star_answer = cratemover9001()
+    print("Ag*:", silver_star_answer, answer_units,
+          error_checker(silver_star_answer, "CMZ", "TWSGQHNHL"))
+    print("Au*:", gold_star_answer, answer_units,
+          error_checker(gold_star_answer, "MCD", "JNRSCDWPP"))
 
 
 def cratemover9000():
@@ -193,7 +226,7 @@ def cratemover9000():
 
     answer = format_the_answer(
         stax_list=[stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9])
-    print("Ag:", answer)
+    return answer
 
 
 def cratemover9001():
@@ -213,7 +246,7 @@ def cratemover9001():
 
     answer = format_the_answer(
         stax_list=[stax1, stax2, stax3, stax4, stax5, stax6, stax7, stax8, stax9])
-    print("Au:", answer)
+    return answer
 
 
 def pull_and_format_data():
@@ -316,9 +349,14 @@ def parse_the_move_instructions(move_instruction: str):
 
 def day6():
     data_pack = import_data(day, dev_env)
+    answer_units = "location of start-of-packet marker"
     datastream_buffer = data_pack[0]
-    print("Ag:", find_the_starter(datastream_buffer, distinct_characters=4))
-    print("Au:", find_the_starter(datastream_buffer, distinct_characters=14))
+    silver_star_answer = find_the_starter(datastream_buffer, distinct_characters=4)
+    gold_star_answer = find_the_starter(datastream_buffer, distinct_characters=14)
+    print("Ag*:", silver_star_answer, answer_units,
+          error_checker(silver_star_answer, 7, 1816))
+    print("Au*:", gold_star_answer, answer_units,
+          error_checker(gold_star_answer, 19, 2625))
 
 
 def find_the_starter(datastream_buffer: str, distinct_characters: int):
@@ -333,6 +371,7 @@ def find_the_starter(datastream_buffer: str, distinct_characters: int):
 def day7():
     # Thank you, anytree!
     data_pack = import_data(day, dev_env)
+    answer_units = "total bytes in folder marked for deletion"
     at_most_this_big = 100000
     total_disk = 70000000
     required_for_update = 30000000
@@ -365,7 +404,7 @@ def day7():
             node_count_after = len(nodes)
             if node_count_before + 1 != node_count_after:
                 # This held me up a long time.
-                print("You got dupes!", name, location_now, size)
+                print(color_me("You got dupes!", "Red"), name, location_now, size)
 
     # for pre, fill, node in RenderTree(root):
     #    print("%s%s" % (pre, node.name), node.size)
@@ -398,7 +437,7 @@ def day7():
             total_smalls += total_size
 
     error_message = error_checker(total_smalls, 95437, 1667443)
-    print("Ag:", total_smalls, error_message)
+    print("Ag*:", total_smalls, answer_units, error_message)
 
     # print(folder_sizes)
 
@@ -409,7 +448,7 @@ def day7():
     for one_size in total_sizes_list:
         if one_size > space_needed:
             error_message = error_checker(one_size, 24933642, 8998590)
-            print("Au:", one_size, error_message)
+            print("Au*:", one_size, answer_units, error_message)
             break
 
 
@@ -421,7 +460,28 @@ def get_unique_name(location_now: Node, name: str):
     return unique_dict_key
 
 
-day = 7
-dev_env = True
+def run_all_days(up_until_day):
+    for run_day in range(1, up_until_day + 1):
+        run_one_day(run_day)
 
-execute()
+
+def run_one_day(run_day):
+    global day
+    global dev_env
+    day = run_day
+
+    dev_env = True
+    print(color_me(f"Day {run_day}:", "Green"), color_me("Sample Puzzle Input (DEV)", "Blue"))
+    execute()
+    print()
+
+    dev_env = False
+    print(color_me(f"Day {run_day}:", "Green"), color_me("My Puzzle Input (PROD)", "Red"))
+    execute()
+    print()
+
+    print()
+
+
+# run_all_days(7)
+run_one_day(7)
