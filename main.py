@@ -1,8 +1,32 @@
 import collections
 from anytree import Node, RenderTree
+import pprint
 
 day = 1
 dev_env = True
+
+
+def run_all_days(up_until_day):
+    for run_day in range(1, up_until_day + 1):
+        run_one_day(run_day)
+
+
+def run_one_day(run_day):
+    global day
+    global dev_env
+    day = run_day
+
+    dev_env = True
+    print(color_me(f"Day {run_day}:", "Green"), color_me("Sample Puzzle Input (DEV)", "Blue"))
+    execute()
+    print()
+
+    dev_env = False
+    print(color_me(f"Day {run_day}:", "Green"), color_me("My Puzzle Input (PROD)", "Red"))
+    execute()
+    print()
+
+    print()
 
 
 def execute():
@@ -436,8 +460,7 @@ def day7():
         if total_size <= at_most_this_big:
             total_smalls += total_size
 
-    error_message = error_checker(total_smalls, 95437, 1667443)
-    print("Ag*:", total_smalls, answer_units, error_message)
+    print("Ag*:", total_smalls, answer_units, error_checker(total_smalls, 95437, 1667443))
 
     # print(folder_sizes)
 
@@ -447,8 +470,7 @@ def day7():
     space_needed = required_for_update - unused_space
     for one_size in total_sizes_list:
         if one_size > space_needed:
-            error_message = error_checker(one_size, 24933642, 8998590)
-            print("Au*:", one_size, answer_units, error_message)
+            print("Au*:", one_size, answer_units, error_checker(one_size, 24933642, 8998590))
             break
 
 
@@ -460,28 +482,157 @@ def get_unique_name(location_now: Node, name: str):
     return unique_dict_key
 
 
-def run_all_days(up_until_day):
-    for run_day in range(1, up_until_day + 1):
-        run_one_day(run_day)
+def day8():
+    data_pack = import_data(day, dev_env)
+    answer_units = "visible trees"
+    grid = make_a_grid(data_pack)
+    pp = pprint.PrettyPrinter(indent=4)
+    grid = sweep_east(grid)
+    grid = sweep_south(grid)
+    grid = sweep_west(grid)
+    grid = sweep_north(grid)
+    # pp.pprint(grid)
+
+    vt = score_it_up(grid)
+    print("Ag*:", vt, answer_units, error_checker(vt, 21, 1798))
+
+    grid = make_a_grid(data_pack)
+    for line_index in range(len(grid)):
+        for tree_index in range(len(grid[line_index])):
+            tree_height = grid[line_index][tree_index][0]
+            up = look_up(grid, tree_height, line_index, tree_index)
+            down = look_down(grid, tree_height, line_index, tree_index)
+            left = look_left(grid, tree_height, line_index, tree_index)
+            right = look_right(grid, tree_height, line_index, tree_index)
+            grid[line_index][tree_index] = [tree_height, up * down * left * right]
+
+    # pp.pprint(grid)
+    max_scenic_score = get_max_scenic_score(grid)
+    print("Au*:", max_scenic_score, answer_units, error_checker(max_scenic_score, 8, 259308))
 
 
-def run_one_day(run_day):
-    global day
-    global dev_env
-    day = run_day
-
-    dev_env = True
-    print(color_me(f"Day {run_day}:", "Green"), color_me("Sample Puzzle Input (DEV)", "Blue"))
-    execute()
-    print()
-
-    dev_env = False
-    print(color_me(f"Day {run_day}:", "Green"), color_me("My Puzzle Input (PROD)", "Red"))
-    execute()
-    print()
-
-    print()
+def make_a_grid(data_pack):
+    grid = []
+    for line in data_pack:
+        treeline = []
+        for char in line:
+            one_tree = [int(char), 0]
+            treeline.append(one_tree)
+        grid.append(treeline)
+    return grid
 
 
-# run_all_days(7)
-run_one_day(7)
+def sweep_east(grid):
+    highest_so_far = 0
+    for line_index in range(len(grid)):
+        for tree_index in range(len(grid[line_index])):
+            tree_height = grid[line_index][tree_index][0]
+            if tree_index == 0 or tree_height > highest_so_far:
+                highest_so_far = tree_height
+                grid[line_index][tree_index] = [tree_height, 1]
+    return grid
+
+
+def sweep_south(grid):
+    highest_so_far = 0
+    for line_index in range(len(grid)):
+        for tree_index in range(len(grid[line_index])):
+            tree_height = grid[tree_index][line_index][0]
+            if tree_index == 0 or tree_height > highest_so_far:
+                highest_so_far = tree_height
+                grid[tree_index][line_index] = [tree_height, 1]
+    return grid
+
+
+def sweep_west(grid):
+    highest_so_far = 0
+    for line_index in reversed(range(len(grid))):
+        for tree_index in reversed(range(len(grid[line_index]))):
+            tree_height = grid[line_index][tree_index][0]
+            if tree_index == len(grid[0]) - 1 or tree_height > highest_so_far:
+                highest_so_far = tree_height
+                grid[line_index][tree_index] = [tree_height, 1]
+    return grid
+
+
+def sweep_north(grid):
+    highest_so_far = 0
+    for line_index in reversed(range(len(grid))):
+        for tree_index in reversed(range(len(grid[line_index]))):
+            tree_height = grid[tree_index][line_index][0]
+            if tree_index == len(grid[0]) - 1 or tree_height > highest_so_far:
+                highest_so_far = tree_height
+                grid[tree_index][line_index] = [tree_height, 1]
+    return grid
+
+
+def score_it_up(grid):
+    visible_trees = 0
+    for line_index in range(len(grid)):
+        for tree_index in range(len(grid[line_index])):
+            visible_trees += grid[tree_index][line_index][1]
+    return visible_trees
+
+
+def look_right(grid, tree_height, x_coord, y_coord):
+    # Return the number of trees one tree can see. Stop if you reach an edge
+    # or at the first tree that is the same height or taller than the tree under consideration.
+    right = 0
+    for tree_index in range(y_coord + 1, len(grid[x_coord])):
+        looking_at_height = grid[x_coord][tree_index][0]
+        if tree_height > looking_at_height:
+            right += 1
+        elif tree_height <= looking_at_height:
+            right += 1  # Count it and leave
+            break
+    return right
+
+
+def look_up(grid, tree_height, x_coord, y_coord):
+    up = 0
+    for line_index in range(x_coord - 1, -1, -1):
+        looking_at_height = grid[line_index][y_coord][0]
+        if tree_height > looking_at_height:
+            up += 1
+        elif tree_height <= looking_at_height:
+            up += 1  # Count it and leave
+            break
+    return up
+
+
+def look_down(grid, tree_height, x_coord, y_coord):
+    down = 0
+    for line_index in range(x_coord + 1, len(grid)):
+        looking_at_height = grid[line_index][y_coord][0]
+        if tree_height > looking_at_height:
+            down += 1
+        elif tree_height <= looking_at_height:
+            down += 1  # Count it and leave
+            break
+    return down
+
+
+def look_left(grid, tree_height, x_coord, y_coord):
+    left = 0
+    for tree_index in range(y_coord - 1, -1, -1):
+        looking_at_height = grid[x_coord][tree_index][0]
+        if tree_height > looking_at_height:
+            left += 1
+        elif tree_height <= looking_at_height:
+            left += 1  # Count it and leave
+            break
+    return left
+
+
+def get_max_scenic_score(grid):
+    max_scenic_score = 0
+    for line_index in range(len(grid)):
+        for tree_index in range(len(grid[line_index])):
+            scenic_score = grid[tree_index][line_index][1]
+            if scenic_score > max_scenic_score:
+                max_scenic_score = scenic_score
+    return max_scenic_score
+
+
+# run_all_days(8)
+run_one_day(8)
