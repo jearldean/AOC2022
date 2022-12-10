@@ -11,7 +11,7 @@ def run_all_days(up_until_day):
         run_one_day(run_day)
 
 
-def run_one_day(run_day):
+def run_one_day(run_day, include_prod=False):
     global day
     global dev_env
     day = run_day
@@ -21,10 +21,11 @@ def run_one_day(run_day):
     execute()
     print()
 
-    dev_env = False
-    print(color_me(f"Day {run_day}:", "Green"), color_me("My Puzzle Input (PROD)", "Red"))
-    execute()
-    print()
+    if include_prod:
+        dev_env = False
+        print(color_me(f"Day {run_day}:", "Green"), color_me("My Puzzle Input (PROD)", "Red"))
+        execute()
+        print()
 
     print()
 
@@ -634,5 +635,153 @@ def get_max_scenic_score(grid):
     return max_scenic_score
 
 
+def day9():
+    data_pack = import_data(day, dev_env)
+    answer_units = "spaces traveled by tail"
+
+    h = [0, 0]
+    t = [0, 0]
+    t_occupied_spaces = set()
+
+    # print(h, t)
+    grid_vis(h, t)
+    for move in data_pack:
+        print("== ", move, " ==")
+        h, t, t_occupied_spaces = perform_the_moves(
+            h, t, direction=move[0], count=int(move[2]), t_occupied_spaces=t_occupied_spaces)
+
+    print(t_occupied_spaces)
+    grid_vis2(t_occupied_spaces)
+    visited_spaces = len(t_occupied_spaces)
+    print("Ag*:", visited_spaces, answer_units, error_checker(visited_spaces, 13, "higher"))
+    # print("Au*:", answer, answer_units, error_checker(answer, dev_answer, prod_answer))
+
+
+def perform_the_moves(h, t, direction, count, t_occupied_spaces):
+    for ii in range(count):
+        # Head moves first:
+        h_x = h[0]
+        h_y = h[1]
+        if direction == "D":
+            h_x -= 1  # D
+        elif direction == "U":
+            h_x += 1  # U
+        elif direction == "L":
+            h_y -= 1  # L
+        elif direction == "R":
+            h_y += 1  # R
+        h = [h_x, h_y]
+
+        # Tail moves second and obeys slightly different laws:
+        t_x = t[0]
+        t_y = t[1]
+        # There are 8 possible movements when combo'd:
+        if h_x - t_x > 1:
+            t_x += 1  # U
+            if h_y > t_y:
+                t_y += 1  # R
+            if h_y < t_y:
+                t_y -= 1  # L
+        elif t_x - h_x > 1:
+            t_x -= 1  # D
+            if h_y > t_y:
+                t_y += 1  # R
+            if h_y < t_y:
+                t_y -= 1  # L
+        elif h_y - t_y > 1:
+            t_y += 1  # R
+            if h_x > t_x:
+                t_x += 1  # U
+            if h_x < t_x:
+                t_x -= 1  # D
+        elif t_y - h_y > 1:
+            t_y -= 1  # L
+            if h_x > t_x:
+                t_x += 1  # U
+            if h_x < t_x:
+                t_x -= 1  # D
+
+        t_occupied_spaces.add(f"{t[0]} {t[1]}")
+        t = [t_x, t_y]
+        grid_vis(h, t)
+    return h, t, t_occupied_spaces
+
+
+def grid_vis(h, t):
+    global dev_env
+    if not dev_env:
+        return
+    grid = []
+    for i in range(5):
+        interior_grid = []
+        for jj in range(6):
+            if i == 4 - h[0] and jj == h[1]:
+                interior_grid.append("H")
+            elif i == 4 - t[0] and jj == t[1]:
+                interior_grid.append("T")
+            elif i == 4 and jj == 0:
+                interior_grid.append("s")
+            else:
+                interior_grid.append(".")
+        grid.append([interior_grid])
+    for line in grid:
+        for chars in line:
+            print("".join(chars))
+    print()
+
+
+def grid_vis2(t_occupied_spaces):
+    score = 0
+    global dev_env
+    if not dev_env:
+        grid_vis3(t_occupied_spaces)
+    grid = []
+    for i in range(5):
+        interior_grid = []
+        for jj in range(6):
+            # for item in t_occupied_spaces:
+            if i == 4 and jj == 0:
+                interior_grid.append("s")
+            elif f"{4 - i} {jj}" in t_occupied_spaces:
+                interior_grid.append("#")
+            else:
+                interior_grid.append(".")
+        grid.append([interior_grid])
+    for line in grid:
+        for chars in line:
+            print("".join(chars))
+            for each in chars:
+                if each != ".":
+                    score += 1
+    print(score)
+    return grid, score
+
+
+def grid_vis3(t_occupied_spaces):
+    xgrid = 300
+    ygrid = 200
+    # zero_spot = int(grid_size / 2)
+    score = 0
+    grid = []
+    for i in range(xgrid):
+        interior_grid = []
+        for jj in range(ygrid):
+            if i == 150 and jj == 120:
+                interior_grid.append("s")
+            elif f"{150 - i} {120 - jj}" in t_occupied_spaces:
+                interior_grid.append("#")
+            else:
+                interior_grid.append(".")
+        grid.append([interior_grid])
+    for line in grid:
+        for chars in line:
+            print("".join(chars))
+            for each in chars:
+                if each != ".":
+                    score += 1
+    print(score)
+    return grid, score
+
+
 # run_all_days(8)
-run_one_day(8)
+run_one_day(9, include_prod=True)
