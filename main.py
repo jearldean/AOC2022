@@ -760,7 +760,6 @@ def grid_vis2(t_occupied_spaces):
 def grid_vis3(t_occupied_spaces):
     xgrid = 300
     ygrid = 200
-    # zero_spot = int(grid_size / 2)
     score = 0
     grid = []
     for i in range(xgrid):
@@ -783,5 +782,87 @@ def grid_vis3(t_occupied_spaces):
     return grid, score
 
 
+def day10():
+    data_pack = import_data(day, dev_env)
+    answer_units = "total signal strengths"
+    cycles_to_record = [20, 60, 100, 140, 180, 220]
+    signal_strengths = []
+    x = 1
+    cycles = 0
+    for instruction in data_pack:
+        if instruction == 'noop':
+            cycles += 1
+            if cycles in cycles_to_record:
+                signal_strengths.append(x)
+        else:
+            cycles += 1
+            if cycles in cycles_to_record:
+                signal_strengths.append(x)
+            cycles += 1
+            if cycles in cycles_to_record:
+                signal_strengths.append(x)
+            x += int(instruction.replace("addx ", ""))
+
+    answer = 0
+    for zz in range(len(cycles_to_record)):
+        answer += cycles_to_record[zz] * signal_strengths[zz]
+    print("Ag*:", answer, answer_units, error_checker(answer, 13140, 14240))
+
+    # Part 2:
+    my_answer2 = "\n"
+    cycle = 0
+    x = 1
+    sprite = [x - 1, x, x + 1]
+
+    for instruction in data_pack:
+        if instruction == 'noop':
+            if cycle in sprite:
+                my_answer2 += "#"
+            else:
+                my_answer2 += "."
+            # print(cycle, ":", x, sprite, my_answer2)
+            cycle += 1
+            if cycle == 40:
+                my_answer2 += "\n"
+                cycle = 0
+        else:
+            if cycle in sprite:
+                my_answer2 += "#"
+            else:
+                my_answer2 += "."
+            cycle += 1
+            # print(cycle, ":", x, sprite, my_answer2)
+            if cycle == 40:
+                my_answer2 += "\n"
+                cycle = 0
+
+            if cycle in sprite:
+                my_answer2 += "#"
+            else:
+                my_answer2 += "."
+            cycle += 1
+            # print(cycle, ":", x, sprite, my_answer2)
+            if cycle == 40:
+                my_answer2 += "\n"
+                cycle = 0
+            x += int(instruction.replace("addx ", ""))
+            sprite = [x - 1, x, x + 1]  # This is the only time we update the sprite location.
+
+    dev_answer2 = "\n##..##..##..##..##..##..##..##..##..##.." \
+                  "\n###...###...###...###...###...###...###." \
+                  "\n####....####....####....####....####...." \
+                  "\n#####.....#####.....#####.....#####....." \
+                  "\n######......######......######......####" \
+                  "\n#######.......#######.......#######.....\n"
+    prod_answer = "\n###..#....#..#.#....#..#.###..####.#..#." \
+                  "\n#..#.#....#..#.#....#.#..#..#....#.#..#." \
+                  "\n#..#.#....#..#.#....##...###....#..####." \
+                  "\n###..#....#..#.#....#.#..#..#..#...#..#." \
+                  "\n#....#....#..#.#....#.#..#..#.#....#..#." \
+                  "\n#....####..##..####.#..#.###..####.#..#.\n"
+    answer_units = "buncha 2's, buncha 3's, buncha 4's..." if dev_env else "PLULKBZH"
+    print("Au*:", my_answer2, answer_units, error_checker(my_answer2, dev_answer2, prod_answer))
+
+
 # run_all_days(8)
-run_one_day(9, include_prod=True)
+run_one_day(10, include_prod=True)
