@@ -1,6 +1,8 @@
 import collections
 from anytree import Node, RenderTree
 import pprint
+from functools import reduce
+import operator
 
 day = 1
 dev_env = True
@@ -864,5 +866,165 @@ def day10():
     print("Au*:", my_answer2, answer_units, error_checker(my_answer2, dev_answer2, prod_answer))
 
 
-# run_all_days(8)
-run_one_day(10, include_prod=True)
+def day11():
+    data_pack = import_data(day, dev_env)
+    answer_units = "monkey inspections"
+    monkey_data = monkey_parser(data_pack)
+    answer = do_many_rounds(rounds=20, relief_divisor=3, monkey_data=monkey_data)
+    print("Ag*:", answer, answer_units, error_checker(answer, 10605, 101436))
+
+    monkey_data = monkey_parser(data_pack)  # Fresh Data Pack
+    answer = do_many_rounds(rounds=10000, relief_divisor=1, monkey_data=monkey_data)
+    print("Au*:", answer, answer_units, error_checker(answer, 2713310158, 19754471646))
+
+
+def do_many_rounds(rounds, relief_divisor, monkey_data):
+    monkey_inspections = []
+    for monkey in range(len(monkey_data)):
+        monkey_inspections.append(0)
+
+    for ee in range(rounds):
+        monkey_data, monkey_inspections = do_one_round(
+            monkey_data, monkey_inspections, relief_divisor)
+
+    """
+        if ee in [0, 19, 999, 2999, 3999, 4999, 5999, 6999, 7999, 8999, 9999]:
+            print(f"== After round {ee + 1} ==")
+            print(monkey_inspections)
+
+    for monkey_dict in monkey_data:
+        item_list = monkey_dict["Items"]
+        monkey_number = monkey_dict["Monkey"]
+        print(f"Monkey {monkey_number}: {item_list}")
+    """
+
+    monkey_inspections.sort(reverse=True)
+    answer = monkey_inspections[0] * monkey_inspections[1]
+    # print(monkey_inspections, monkey_inspections[0], "*", monkey_inspections[1], "=", answer)
+    return answer
+
+
+def do_one_round(monkey_data, monkey_inspections, relief_divisor):
+    """
+    Monkey 1:
+        Monkey inspects an item with a worry level of 54.
+            Worry level increases by 6 to 60.
+            Monkey gets bored with item. Worry level is divided by 3 to 20.
+            Current worry level is not divisible by 19.
+            Item with worry level 20 is thrown to monkey 0.
+    """
+    for monkey in range(len(monkey_data)):
+        # print(f"Monkey {monkey}:")
+        for item in reversed(monkey_data[monkey]["Items"]):
+            monkey_inspections[monkey] += 1
+            # print("monkey_inspections", monkey_inspections)
+            # print(f"\tMonkey inspects an item with a worry level of {item}.")
+            new_worry_level = monkey_operation(
+                item, monkey_data[monkey]["Operation"])  # new = old * 19
+            if relief_divisor != 1:
+                new_worry_level /= relief_divisor
+            new_worry_level = int(new_worry_level)
+            # print(f"\t\tMonkey gets bored with item.
+            # Worry level is divided by 3 to {new_worry_level}.")
+            test_divisor = monkey_data[monkey]["Test"]
+            if is_it_divisible(new_worry_level, test_divisor):
+                # print(f"\t\tCurrent worry level is divisible by {test_divisor}.")
+                throw_item(monkey_data, from_monkey=monkey,
+                           to_monkey=monkey_data[monkey]["True"],
+                           worry_level_of_item=new_worry_level, old_worry_level=item)
+            else:
+                # print(f"\t\tCurrent worry level is not divisible by {test_divisor}.")
+                throw_item(monkey_data, from_monkey=monkey,
+                           to_monkey=monkey_data[monkey]["False"],
+                           worry_level_of_item=new_worry_level, old_worry_level=item)
+    return monkey_data, monkey_inspections
+
+
+def monkey_operation(old, operation):
+    last_word = operation.split(" ")[-1]
+    if last_word == "old":  # square
+        new = old * old
+        # print(f"\t\tWorry level is multiplied by itself to {new}.")
+        return new
+    elif "+" in operation:
+        new = old + int(last_word)
+        # print(f"\t\tWorry level increases by {int(last_word)} to {new}.")
+        return new
+    elif "*" in operation:
+        new = old * int(last_word)
+        # print(f"\t\tWorry level is multiplied by {int(last_word)} to {new}.")
+        return new
+
+
+def throw_item(monkey_data, from_monkey, to_monkey, worry_level_of_item, old_worry_level):
+    old_items = monkey_data[from_monkey]["Items"]
+    old_items.remove(old_worry_level)
+    monkey_data[from_monkey]["Items"] = old_items
+
+    old_items = monkey_data[to_monkey]["Items"]
+    # old_items.append(worry_level_of_item)  # Not good enough for Part 2.
+
+    """Got a tip from mjpieters - really had no idea how to bring it down from exponential runtime.
+    "Luckily, we can cap the worry levels to the product of all the monkeys' divisible values;
+    e.g. the example monkeys have divisible test values 17, 13, 19 and 23, so worry levels
+    can be reduced by taking their modulo with 96577:"""
+    lcm = reduce(operator.mul, (monkey["Test"] for monkey in monkey_data))
+
+    old_items.append(worry_level_of_item % lcm)
+    monkey_data[to_monkey]["Items"] = old_items
+
+    # print(f"\t\tItem with worry level {worry_level_of_item} is thrown to monkey {to_monkey}.")
+    return monkey_data
+
+
+def monkey_parser(data_pack):
+    """
+    Monkey 0:
+    Starting items: 79, 98
+    Operation: new = old * 19
+    Test: divisible by 23
+        If true: throw to monkey 2
+        If false: throw to monkey 3
+
+    """
+    monkey_counter = 0
+    monkey_data = []
+    one_monkeys_data = {}
+    for dd in data_pack:
+        if not dd:
+            monkey_data.append(one_monkeys_data)
+            monkey_counter += 1
+            one_monkeys_data = {}  # Reset this
+        else:
+            if "Monkey" in dd:  # Monkey 0:
+                one_monkeys_data["Monkey"] = int(dd.replace("Monkey ", "").replace(":", ""))
+            elif "Starting" in dd:  # Starting items: 79, 98
+                items_list_str = dd.replace("Starting items: ", "")
+                items_list = items_list_str.split(", ")
+                real_items_list = []
+                for item in items_list:
+                    real_items_list.append(int(item))
+                one_monkeys_data["Items"] = real_items_list
+            elif "Operation" in dd:  # Operation: new = old * 19
+                one_monkeys_data["Operation"] = dd.replace("Operation: ", "")
+            elif "Test: divisible by" in dd:  # Test: divisible by 23
+                one_monkeys_data["Test"] = int(dd.replace("Test: divisible by ", ""))
+            elif "true" in dd:  # If true: throw to monkey 2
+                one_monkeys_data["True"] = int(dd.replace("If true: throw to monkey ", ""))
+            elif "false" in dd:  # If false: throw to monkey 3
+                one_monkeys_data["False"] = int(dd.replace("If false: throw to monkey ", ""))
+
+    monkey_data.append(one_monkeys_data)
+    # print(monkey_data)
+    return monkey_data
+
+
+def is_it_divisible(a_number, evenly_divisible_by):
+    if a_number % evenly_divisible_by == 0:
+        return True
+    else:
+        return False
+
+
+# run_all_days(11)
+run_one_day(11, include_prod=True)
