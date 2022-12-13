@@ -3,6 +3,7 @@ from anytree import Node, RenderTree
 import pprint
 from functools import reduce
 import operator
+from collections import defaultdict
 
 day = 1
 dev_env = True
@@ -637,7 +638,7 @@ def get_max_scenic_score(grid):
     return max_scenic_score
 
 
-def day9():
+def original_day9_not_working():
     data_pack = import_data(day, dev_env)
     answer_units = "spaces traveled by tail"
 
@@ -1026,5 +1027,303 @@ def is_it_divisible(a_number, evenly_divisible_by):
         return False
 
 
+def day9():
+    """
+    Taking another stab at Day 9.
+    Got a hint from mjpieters:
+    "The first thing to realise is that, if the tail moves, it'll move to the location the head was
+    just at."
+    Nope, I did something else before.
+
+    "So how to know when to move the tail?
+    Calculate the maximum distance in either direction between tail and head after moving the head;
+    if it is greater than 1, move the tail to where the head just was."
+    Yes, I was doing that.
+    """
+    data_pack = import_data(day, dev_env)
+    answer_units = "spaces traveled by tail"
+
+    visited_spaces = perform_the_moves_9(data_pack)
+    print("Ag*:", visited_spaces, answer_units, error_checker(visited_spaces, 13, 6642))
+    visited_spaces = perform_the_moves_9(data_pack, knots=10)  # 5339 was too high
+    print("Au*:", visited_spaces, answer_units, error_checker(visited_spaces, 1, 6642))
+
+
+def perform_the_moves_9(data_pack, knots=2):
+    current_configuration = []
+    for ii in range(knots):
+        current_configuration.append([0, 0])
+    t_occupied_spaces = set()
+    t_occupied_spaces.add("[0, 0]")
+    for move in data_pack:
+        current_configuration, t_occupied_spaces = pull_the_string(
+            move, current_configuration, t_occupied_spaces)
+    visited_spaces = len(t_occupied_spaces)
+    return visited_spaces
+
+
+def pull_the_string(move, current_configuration, t_occupied_spaces):
+    direction = move.split(" ")[0]
+    num_moves = int(move.split(" ")[1])
+    for dd in range(num_moves):
+        new_configuration = []
+        for knot in range(len(current_configuration)):
+            if knot == 0:  # Head
+                new_node = move_the_head(
+                    direction=direction, current_configuration=current_configuration)
+            else:  # Followers are 1-9
+                new_node = move_the_tail(leader=new_configuration[knot - 1],
+                                         follower=current_configuration[knot],
+                                         leaders_last_position=current_configuration[knot - 1])
+            new_configuration.append(new_node)
+        t_occupied_spaces.add(f"[{new_configuration[-1][0]}, {new_configuration[-1][1]}]")
+        current_configuration = new_configuration
+        print(current_configuration)
+    return current_configuration, t_occupied_spaces
+
+
+def one_click(current_configuration, direction, last_positions):
+    interim_data = []
+    for knot in range(len(current_configuration)):
+        if knot == 0:  # Head
+            new_node = move_the_head(
+                direction=direction, current_configuration=current_configuration)
+        else:  # Followers are 1-9
+            new_node = move_the_tail(leader=current_configuration[knot - 1],
+                                     follower=current_configuration[knot],
+                                     leaders_last_position=last_positions[knot - 1])
+        interim_data.append(new_node)
+    return interim_data
+
+
+def move_the_head(direction, current_configuration):
+    hx = current_configuration[0][0]
+    hy = current_configuration[0][1]
+    if direction == "D":
+        hx -= 1
+    elif direction == "U":
+        hx += 1
+    elif direction == "L":
+        hy -= 1
+    elif direction == "R":
+        hy += 1
+    return [hx, hy]
+
+
+def move_the_tail(leader, follower, leaders_last_position):
+    if leader in wheres_my_9(follower):
+        return follower  # No move.
+    else:  # Now T will occupy the last space held by H
+        return leaders_last_position
+
+
+def wheres_my_9(a_coordinate):
+    # What are the 9 surrounding and inclusive coordinates of a single coordinate?
+    x = a_coordinate[0]
+    y = a_coordinate[1]
+    return [[x, y], [x + 1, y], [x, y + 1], [x - 1, y], [x, y - 1],
+            [x + 1, y + 1], [x - 1, y - 1], [x + 1, y - 1], [x - 1, y + 1]]
+
+
+def day12():
+    graph = Graph()
+    data_pack = import_data(day, dev_env)
+    answer_units = "steps"
+    grid = []
+    for row in data_pack:
+        line = []
+        for char in row:
+            line.append(char)
+        grid.append(line)
+
+    begin = None
+    end = None
+    for vertical in range(len(grid)):
+        for horizontal in range(len(grid[vertical])):
+            char = grid[vertical][horizontal]
+            coordinate_name = f'{vertical} {horizontal}'
+            neighbors = get_my_neighbors(grid, vertical, horizontal, v_bound=len(grid),
+                                         h_bound=len(grid[vertical]))
+            for neighbor in neighbors:  # [{f'{vertical-1} {horizontal}': neighbor_char}, ]
+                for neighbor_coordinate_name in neighbor:
+                    neighbor_char = neighbor[neighbor_coordinate_name]
+                    cost = work_out_the_cost(char, neighbor_char)
+                    if cost == 0:  # Don't add forbidden paths to the possible solution.
+                        graph.add_edge(coordinate_name, neighbor_coordinate_name, cost)
+                        print(f"{char}:{coordinate_name}\t"
+                              f"{neighbor_char}:{neighbor_coordinate_name}\tcost={cost}")
+                    if neighbor_char == "S":
+                        begin = neighbor_coordinate_name
+                    if neighbor_char == "E":
+                        end = neighbor_coordinate_name
+
+    out = dijsktra(graph, begin, end)
+    print(out, len(out))
+    # goals = [s_vert, s_horiz, e_vert, e_horiz]
+
+    # answer = find_shortest_path(grid, goals)
+    print("Ag*:", len(out), answer_units, error_checker(len(out), 31, 0))
+    # print("Au*:", answer, answer_units, error_checker(answer, 0, 0))
+
+
+def work_out_the_cost(char1, char2):
+    if char1 in ["S", "E"]:
+        if char1 == "S":
+            cost1 = 0
+        if char1 == "E":
+            cost1 = 27
+    else:
+        cost1 = ord(char1) - 96
+    if char2 in ["S", "E"]:
+        if char2 == "S":
+            cost2 = 0
+        if char2 == "E":
+            cost2 = 27
+    else:
+        cost2 = ord(char2) - 96
+    if cost2 > cost1 and abs(cost2 - cost1) <= 1:
+        cost = 0
+    else:
+        cost = 10
+    return cost
+
+
+def get_my_neighbors(grid, vertical, horizontal, v_bound, h_bound):
+    neighbors = []
+    if vertical < v_bound - 1:
+        neighbor_char = grid[vertical + 1][horizontal]
+        neighbors.append({f'{vertical + 1} {horizontal}': neighbor_char})
+    if vertical > 0:
+        neighbor_char = grid[vertical - 1][horizontal]
+        neighbors.append({f'{vertical - 1} {horizontal}': neighbor_char})
+    if horizontal < h_bound - 1:
+        neighbor_char = grid[vertical][horizontal + 1]
+        neighbors.append({f'{vertical} {horizontal + 1}': neighbor_char})
+    if horizontal > 0:
+        neighbor_char = grid[vertical][horizontal - 1]
+        neighbors.append({f'{vertical} {horizontal - 1}': neighbor_char})
+    return neighbors
+
+
+def dijsktra(graph, initial, end):
+    # shortest paths is a dict of nodes
+    # whose value is a tuple of (previous node, weight)
+    shortest_paths = {initial: (None, 0)}
+    current_node = initial
+    visited = set()
+
+    while current_node != end:
+        visited.add(current_node)
+        destinations = graph.edges[current_node]
+        weight_to_current_node = shortest_paths[current_node][1]
+
+        for next_node in destinations:
+            weight = graph.weights[(current_node, next_node)] + weight_to_current_node
+            if next_node not in shortest_paths:
+                shortest_paths[next_node] = (current_node, weight)
+            else:
+                current_shortest_weight = shortest_paths[next_node][1]
+                if current_shortest_weight > weight:
+                    shortest_paths[next_node] = (current_node, weight)
+
+        next_destinations = {node: shortest_paths[node] for node in shortest_paths if
+                             node not in visited}
+        if not next_destinations:
+            return "Route Not Possible"
+        # next node is the destination with the lowest weight
+        current_node = min(next_destinations, key=lambda k: next_destinations[k][1])
+
+    # Work back through destinations in shortest path
+    path = []
+    while current_node is not None:
+        path.append(current_node)
+        next_node = shortest_paths[current_node][0]
+        current_node = next_node
+    # Reverse path
+    path = path[::-1]
+    return path
+
+
+class Graph():
+    def __init__(self):
+        """
+        self.edges is a dict of all possible next nodes
+        e.g. {'X': ['A', 'B', 'C', 'E'], ...}
+        self.weights has all the weights between two nodes,
+        with the two nodes as a tuple as the key
+        e.g. {('X', 'A'): 7, ('X', 'B'): 2, ...}
+        """
+        self.edges = defaultdict(list)
+        self.weights = {}
+
+    def add_edge(self, from_node, to_node, weight):
+        # Note: assumes edges are bi-directional
+        self.edges[from_node].append(to_node)
+        self.edges[to_node].append(from_node)
+        self.weights[(from_node, to_node)] = weight
+        self.weights[(to_node, from_node)] = weight
+
+
+def day20212():
+    # Wanted to take an alternate look at last year's Day 2
+    data_pack = import_data(day, dev_env)
+    answer_units = "position product"
+
+    x_position = 0
+    y_position = 0
+    for instruction in data_pack:
+        instruction_pieces = instruction.split(" ")
+        direction = instruction_pieces[0]
+        number = int(instruction_pieces[1])
+        if direction == "forward":
+            x_position += number
+        elif direction == "down":
+            y_position += number
+        elif direction == "up":
+            y_position -= number
+    answer = y_position * x_position
+    print("Ag*:", answer, answer_units, error_checker(answer, 150, 2039912))
+
+    # Or another way:
+    forwards = 0
+    downs = 0
+    ups = 0
+    for instruction in data_pack:
+        instruction_pieces = instruction.split(" ")
+        direction = instruction_pieces[0]
+        number = int(instruction_pieces[1])
+        if direction == "forward":
+            forwards += number
+        elif direction == "down":
+            downs += number
+        elif direction == "up":
+            ups += number
+    answer = forwards * (downs - ups)
+    print("Ag*:", answer, answer_units, error_checker(answer, 150, 2039912))
+
+    """How does AIM change things?
+    down X increases your aim by X units.
+    up X decreases your aim by X units.
+    forward X does two things:
+    It increases your horizontal position by X units.
+    It increases your depth by your aim multiplied by X."""
+    x_position = 0
+    y_position = 0
+    aim = 0
+    for instruction in data_pack:
+        instruction_pieces = instruction.split(" ")
+        direction = instruction_pieces[0]
+        number = int(instruction_pieces[1])
+        if direction == "forward":
+            x_position += number
+            y_position += number * aim
+        elif direction == "down":
+            aim += number
+        elif direction == "up":
+            aim -= number
+    answer = y_position * x_position
+    print("Au*:", answer, answer_units, error_checker(answer, 900, 1942068080))
+
+
 # run_all_days(11)
-run_one_day(11, include_prod=True)
+run_one_day(20212, include_prod=True)
