@@ -1399,9 +1399,13 @@ def day15():
 
     new_data = fix_day_15_data(data_pack)
     # print(new_data)
-    # important_row = 10
-    important_row = 2000000
-    skew = important_row + 10000
+
+    if dev_env:
+        important_row = 10
+        skew = important_row + 2
+    else:
+        important_row = 2000000
+        skew = important_row + 10000
     # plot_the_data(new_data)  # That was fun to learn, not sure it's helpful yet.
     """Pseudocode:
     1. plot the data
@@ -1543,6 +1547,14 @@ def move_to_a_valve(time_remaining, time_elapsed):
     time_remaining, time_elapsed = costs_a_minute(time_remaining, time_elapsed)
 
 
+def day18():
+    data_pack = import_data(day, dev_env)
+    answer_units = "surface area"
+    surf = 0
+    print("Ag*:", surf, answer_units, error_checker(surf, 64, 6642))
+    # print("Au*:", answer, answer_units, error_checker(answer, 1, 6642))
+
+
 def day19():
     data_pack = import_data(day, dev_env)
     answer_units = "Total Quality Levels"
@@ -1645,88 +1657,62 @@ def quality_level_and_answer(robot_prices):
 
 def day21():
     data_pack = import_data(day, dev_env)
-    answer_units = "Number yelled by monkey"
-    monkeys = {}
+    day21a(data_pack)
+    day21b(data_pack)
 
-    """
+
+def day21_process_monkey_data(data_pack):
+    monkeys = {}
     for line in data_pack:
         pieces = line.split(": ")
         try:
             monkeys[pieces[0]] = int(pieces[1])
         except:
             monkeys[pieces[0]] = pieces[1]
+    return monkeys
 
+
+def day21a(data_pack):
+    answer_units = "Number yelled by monkey"
+    monkeys = day21_process_monkey_data(data_pack)
+    monkeys = day21a_solver(monkeys)
+    answer = int(monkeys['root'])
+    print("Ag*:", answer, answer_units, error_checker(answer, 152, 85616733059734))
+
+
+def day21a_solver(monkeys):
     while isinstance(monkeys['root'], str):
         for key in monkeys:
             if isinstance(monkeys[key], str):
-                pieces = monkeys[key].split(" ")
-                dude1 = pieces[0]
-                oper = pieces[1]
-                dude2 = pieces[2]
-                if isinstance(monkeys[dude1], (int, float)) and isinstance(monkeys[dude2],
-                                                                           (int, float)):
-                    monkeys[key] = eval(f"{monkeys[dude1]}{oper}{monkeys[dude2]}")
-    print(monkeys)
-    ans = int(monkeys['root'])
-    print("Ag*:", ans, answer_units, error_checker(ans, 152, 85616733059734))"""
+                monkey_pieces = monkeys[key].split(" ")
+                a = monkey_pieces[0]
+                oper = monkey_pieces[1]
+                b = monkey_pieces[2]
+                if isinstance(monkeys[a], (int, float)) and isinstance(monkeys[b], (int, float)):
+                    monkeys[key] = eval(f"{monkeys[a]}{oper}{monkeys[b]}")
+    return monkeys
 
+
+def day21b(data_pack, humn_guess=0):
     answer_units = "Number yelled by human"
-    monkeys2 = {}
-
-    humn_guess = 3560324848168  # I just did manual trial and error. Just desperate.
-
-    for line in data_pack:
-        pieces = line.split(": ")
-        try:
-            if pieces[0] == 'humn':
-                monkeys2[pieces[0]] = humn_guess
-            else:
-                monkeys2[pieces[0]] = int(pieces[1])
-        except:
-            if pieces[0] == 'root':
-                # a little hardcodey here with the +:
-                monkeys2[pieces[0]] = pieces[1].replace("+", "==")
-            else:
-                monkeys2[pieces[0]] = pieces[1]
-    # print(monkeys2)
-    pieces = monkeys2['root'].split(" ")
-    rootdude1 = pieces[0]
-    rootdude2 = pieces[2]
-
-    answer2 = 0
-    give_up = 500
-    turn = 0
-    while monkeys2[rootdude1] != monkeys2[rootdude2]:
-        turn += 1
-        for key in monkeys2:
-            if isinstance(monkeys2[key], str):
-                pieces = monkeys2[key].split(" ")
-                dude1 = pieces[0]
-                oper = pieces[1]
-                dude2 = pieces[2]
-                if isinstance(monkeys2[dude1], (int, float)) and isinstance(monkeys2[dude2],
-                                                                            (int, float)):
-                    if key == 'root' and monkeys2[dude1] == monkeys2[dude2]:
-                        answer2 = humn_guess
-                        print('Solved it!')
-                        break
-                    else:
-                        monkeys2[key] = eval(f"{monkeys2[dude1]}{oper}{monkeys2[dude2]}")
-        if turn == give_up:
-            print('Gave up!')
-            break
-
-    answer2 = humn_guess
-    if isinstance(monkeys2['root'], bool):
-        x = monkeys2[rootdude1] - monkeys2[rootdude2]
-        print("No Solution", monkeys2[rootdude1], monkeys2[rootdude2], humn_guess, 'gave', f"{x:.2e}")
+    monkeys = day21_process_monkey_data(data_pack)
+    monkeys['humn'] = humn_guess
+    new_condition = monkeys['root'].replace("+", "-")
+    monkeys['root'] = new_condition
+    monkeys = day21a_solver(monkeys)
+    if abs(monkeys['root']) < 0.1:
+        good_enough = round(humn_guess)
+        print("Au*:", good_enough, answer_units, error_checker(good_enough, 301, 3560324848168))
     else:
-        pieces = monkeys2['root'].split(" ")
-        dude1 = pieces[0]
-        dude2 = pieces[2]
-        print(monkeys2['root'], monkeys2[dude1] == monkeys2[dude2], monkeys2[dude1],
-              monkeys2[dude2])
-        print("Au*:", answer2, answer_units, error_checker(answer2, 301, 3560324848168))
+        diff = monkeys['root']
+        if dev_env:
+            new_humn_guess = humn_guess - diff
+            # print(diff, new_humn_guess)
+            day21b(data_pack, humn_guess=new_humn_guess)  # Oops, recursion!
+        else:
+            new_humn_guess = humn_guess + (diff * .01)  # Need a different guesser, I guess.
+            # print(diff, new_humn_guess)
+            day21b(data_pack, humn_guess=new_humn_guess)  # Oops, recursion!
 
 
 # run_all_days(11)
