@@ -4,6 +4,8 @@ import pprint
 from functools import reduce
 import operator
 from collections import defaultdict
+import math
+import matplotlib.pyplot as plt
 
 day = 1
 dev_env = True
@@ -1325,5 +1327,407 @@ def day20212():
     print("Au*:", answer, answer_units, error_checker(answer, 900, 1942068080))
 
 
+def day13():
+    data_pack = import_data(day, dev_env)
+    answer_units = "sum of indices in the right order"
+    transformed_data = transform_data(data_pack)
+    print(transformed_data)
+
+    right_order_pairs = 0
+    for index in range(len(transformed_data)):
+        right_order_pairs += oops_recursion(transformed_data[index][0], transformed_data[index][1])
+        # Let's return 0 for no and 1 for yes.
+
+    print("Ag*:", right_order_pairs, answer_units, error_checker(right_order_pairs, 13, "?"))
+    print("Au*:", right_order_pairs, answer_units, error_checker(right_order_pairs, 150, 2039912))
+
+
+def oops_recursion(left_side, right_side):
+    # Let's return 0 for no and 1 for yes.
+    for char in left_side:
+        pass
+        # Let's do some pseudocode instead.
+
+        # If you see a left bracket, recurse:
+
+        # If you see a right bracket, pop out one level:
+
+
+def compare_o(left_thing, right_thing):
+    if left_thing.isint() and right_thing.isint():
+        if left_thing > right_thing:
+            return 0  # Right side is smaller, so inputs are not in the right order
+        else:  # elif left_thing <= right_thing:
+            return 1
+    elif left_thing.islist() and right_thing.isint():
+        # convert
+        return compare_o(left_thing, [right_thing])
+    elif left_thing.isint() and right_thing.islist():
+        new_thing = [left_thing]
+        return compare_o(left_thing=new_thing, right_thing=right_thing)
+    elif left_thing.islist() and right_thing.islist():
+        for in_index in range(len(left_thing)):
+            try:
+                return compare_o(left_thing[in_index], right_thing[in_index])
+            except IndexError:  # Right side ran out of items, so inputs are not in the right order
+                return 0
+
+
+def transform_data(data_pack):
+    transformed_data = []
+    pairs = []
+    for line in data_pack:
+        if line:
+            pairs.append(line)
+        else:
+            transformed_data.append(pairs)
+            pairs = []
+    return transformed_data
+
+
+def day14():
+    data_pack = import_data(day, dev_env)
+    answer_units = "sand grains"
+
+    print("Ag*:", answer, answer_units, error_checker(answer, 24, 6642))
+    print("Au*:", answer, answer_units, error_checker(answer, 1, 6642))
+
+
+def day15():
+    data_pack = import_data(day, dev_env)
+    answer_units = "positions that cannot host a beacon"
+
+    new_data = fix_day_15_data(data_pack)
+    # print(new_data)
+    # important_row = 10
+    important_row = 2000000
+    skew = important_row + 10000
+    # plot_the_data(new_data)  # That was fun to learn, not sure it's helpful yet.
+    """Pseudocode:
+    1. plot the data
+    2. get the DISTANCE to each B from S (pythagorean theorem? Nope.)
+    3. Change the plot to BLOT OUT every spot within those radii.
+    """
+    all_xs = []
+    all_ys = []
+    for one_coordinate in new_data:
+        all_xs.append(one_coordinate[0][0])
+        all_xs.append(one_coordinate[1][0])
+        all_ys.append(one_coordinate[0][1])
+        all_ys.append(one_coordinate[1][1])
+    max_x = max(all_xs) + 10 + skew
+    max_y = max(all_ys) + 10 + skew
+
+    plotter = []
+    for y in range(max_y):
+        a_line = []
+        for x in range(max_x):
+            a_line.append(".")
+        plotter.append(a_line)
+
+    for one_coordinate in new_data:
+        plotter = make_a_square_around_me(plotter, one_coordinate, skew)
+
+    answer = 0
+    string = ""
+    for row in plotter:
+        string += row[important_row + skew]
+        if row[important_row + skew] == "#":
+            answer += 1
+    print(string)
+    print("Ag*:", answer, answer_units, error_checker(answer, 26, 6642))
+    # print("Au*:", answer, answer_units, error_checker(answer, 1, 6642))
+
+
+def make_a_square_around_me(plotter, one_coordinate, skew):
+    s = one_coordinate[0]
+    b = one_coordinate[1]
+    dist = one_coordinate[2]
+    # Find the radius number:
+    radius = abs(dist[0]) + abs(dist[1])
+
+    # print(one_coordinate, radius)
+    for expando in range(radius + 1):
+        retracto = radius - expando
+        for sy in range(s[1] - retracto + skew, s[1] + retracto + skew + 1):
+            for sx in range(s[0] - expando + skew, s[0] + expando + skew + 1):
+                if plotter[sx][sy] not in ["S", "B"]:
+                    plotter[sx][sy] = "#"
+    plotter[s[0] + skew][s[1] + skew] = "S"
+    plotter[b[0] + skew][b[1] + skew] = "B"
+    # for a in plotter:
+    #    print("".join(a))
+    # print()
+    return plotter
+
+
+def plot_the_data(new_data):
+    for coords in new_data:
+        plt.plot(coords[0][0], coords[0][1], 'bs')
+        plt.plot(coords[1][0], coords[1][1], 'rs')
+    plt.axis([-2, 25, 25, -2])
+    plt.show()
+
+
+def fix_day_15_data(data_pack):
+    # Sensor at x=2, y=18: closest beacon is at x=-2, y=15
+    new_data = []
+    for line in data_pack:
+        pieces = line.split(" ")
+        sx = int(pieces[2].replace("x=", "").replace(",", ""))
+        sy = int(pieces[3].replace("y=", "").replace(":", ""))
+        bx = int(pieces[8].replace("x=", "").replace(",", ""))
+        by = int(pieces[9].replace("y=", ""))
+        # distance = math.sqrt(abs(sx-bx)*abs(sx-bx) + abs(sy-by)*abs(sy-by))
+        new_data.append([[sx, sy], [bx, by], [bx - sx, by - sy]])
+    return new_data
+
+
+def day16():
+    data_pack = import_data(day, dev_env)
+    answer_units = "pressure released"
+
+    open_a_valve = 1  # min
+    follow_a_tunnel = 1  # min
+    time_remaining = 30  # min
+    time_elapsed = 0  # min
+    open_valves = []
+    pressure_released = 0
+    new_data = fix_data_pack(data_pack)
+    print(new_data)
+
+    print("Ag*:", pressure_released, answer_units, error_checker(pressure_released, 1651, 6642))
+    # print("Au*:", answer, answer_units, error_checker(answer, 1, 6642))
+
+
+def do_the_routine(new_data, time_remaining, open_a_valve=1, follow_a_tunnel=1):
+    flo = 0
+    for jj in time_remaining:
+        decide_what_to_do()
+
+
+def decide_what_to_do():
+    move_to_a_valve()
+
+
+def fix_data_pack(data_pack, include_zeros=False):
+    # Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
+    new_data = []
+    for a_string in data_pack:
+        one_valve = []
+        words = a_string.split(" ")
+        one_valve.append(words[1])
+        flow = int(words[4].replace(";", "").replace("rate=", ""))
+        one_valve.append(flow)
+        gates = []
+        for route in words[9:]:
+            gates.append(route)
+        one_valve.append(gates)
+        if flow == 0 and not include_zeros:
+            continue
+        new_data.append(one_valve)
+    return new_data
+
+
+def costs_a_minute(time_remaining, time_elapsed):
+    time_remaining -= 1
+    time_elapsed += 1
+    return time_remaining, time_elapsed
+
+
+def open_a_valve(time_remaining, time_elapsed):
+    time_remaining, time_elapsed = costs_a_minute(time_remaining, time_elapsed)
+
+
+def move_to_a_valve(time_remaining, time_elapsed):
+    time_remaining, time_elapsed = costs_a_minute(time_remaining, time_elapsed)
+
+
+def day19():
+    data_pack = import_data(day, dev_env)
+    answer_units = "Total Quality Levels"
+
+    minutes = 24
+    robot_prices = fix_data_pack_19(data_pack)
+    for blueprint in robot_prices:
+        for min_ in range(minutes):
+            robot_prices = run_one_day19(robot_prices, blueprint, min_ + 1)
+
+    print(robot_prices)
+    ans = quality_level_and_answer(robot_prices)
+    print("Ag*:", ans, answer_units, error_checker(ans, 33, 6642))
+    # print("Au*:", answer, answer_units, error_checker(answer, 1, 6642))
+
+
+def run_one_day19(robot_prices, blueprint, minute):
+    """Each robot can collect 1 of its resource type per minute.
+
+    It also takes one minute for the robot factory (also conveniently from your pack)
+    to construct any type of robot, although it consumes the necessary resources available
+    when construction begins."""
+    print(f"== Minute {minute} ==")
+    buying_a_robot = None
+
+    # Buy a robot.
+    for robot in ['geode', 'obsidian', 'clay', 'ore']:  # Try to buy the biggest you can first
+        ore_i_have = robot_prices[blueprint]['ore'][2]
+        clay_i_have = robot_prices[blueprint]['clay'][2]
+        obsidian_i_have = robot_prices[blueprint]['obsidian'][2]
+
+        robot_price, robot_count, rock_count = robot_prices[blueprint][robot]
+        enough_ore = robot_price[0] <= ore_i_have
+        enough_clay = robot_price[1] <= clay_i_have
+        enough_obsidian = robot_price[2] <= obsidian_i_have
+        if enough_ore and enough_clay and enough_obsidian:
+            # Delete the payment
+            buying_a_robot = robot
+            new_ore_count = ore_i_have - robot_price[0]
+            new_clay_count = clay_i_have - robot_price[1]
+            new_obsidian_count = obsidian_i_have - robot_price[2]
+            robot_price, robot_count, rock_count = robot_prices[blueprint]['ore']
+            robot_prices[blueprint]['ore'] = [robot_price, robot_count, new_ore_count]
+            robot_price, robot_count, rock_count = robot_prices[blueprint]['clay']
+            robot_prices[blueprint]['clay'] = [robot_price, robot_count, new_clay_count]
+            robot_price, robot_count, rock_count = robot_prices[blueprint]['obsidian']
+            robot_prices[blueprint]['obsidian'] = [robot_price, robot_count, new_obsidian_count]
+            print(f"Spend {robot_prices[blueprint][robot][0]} on a {buying_a_robot}.")
+            break
+        # robot_prices[blueprint][robot] = [robot_price, robot_count, rock_count]
+
+    # mine:
+    for robot in ['geode', 'obsidian', 'clay', 'ore']:
+        robot_price, robot_count, rock_count = robot_prices[blueprint][robot]
+        rock_count += robot_count * 1
+        robot_prices[blueprint][robot] = [robot_price, robot_count, rock_count]
+        print(f"{robot} mined, now have {rock_count}.")
+
+    # collect new robot
+    if buying_a_robot:
+        robot_price, robot_count, rock_count = robot_prices[blueprint][buying_a_robot]
+        robot_prices[blueprint][buying_a_robot] = [robot_price, robot_count + 1, rock_count]
+        print(f"{buying_a_robot} robot is delivered. Now have {robot_count + 1}.")
+    print()
+    return robot_prices
+
+
+def fix_data_pack_19(data_pack):
+    """Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot
+    costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian."""
+    fixed_data_pack = {}
+    for line in data_pack:
+        words = line.split(" ")
+        blueprint = int(words[1].replace(":", ""))
+        ore_robot_price = [int(words[6]), 0, 0]
+        clay_robot_price = [int(words[12]), 0, 0]
+        obsidian_robot_price = [int(words[18]), int(words[21]), 0]
+        geode_robot_price = [int(words[27]), 0, int(words[30])]
+        fixed_data_pack[blueprint] = {'ore': [ore_robot_price, 1, 0],
+                                      'clay': [clay_robot_price, 0, 0],
+                                      'obsidian': [obsidian_robot_price, 0, 0],
+                                      'geode': [geode_robot_price, 0, 0]}
+    return fixed_data_pack
+
+
+def quality_level_and_answer(robot_prices):
+    """
+    Determine the quality level of each blueprint by multiplying that blueprint's ID number with the
+    largest number of geodes that can be opened in 24 minutes using that blueprint. In this example,
+    the first blueprint has ID 1 and can open 9 geodes, so its quality level is 9. The second
+    blueprint has ID 2 and can open 12 geodes, so its quality level is 24. Finally, if you add up
+    the quality levels of all of the blueprints in the list, you get 33.
+    :return:
+    """
+    running_total = 0
+    for key in robot_prices:
+        running_total += key * robot_prices[key]['geode'][2]
+    return running_total
+
+
+def day21():
+    data_pack = import_data(day, dev_env)
+    answer_units = "Number yelled by monkey"
+    monkeys = {}
+
+    """
+    for line in data_pack:
+        pieces = line.split(": ")
+        try:
+            monkeys[pieces[0]] = int(pieces[1])
+        except:
+            monkeys[pieces[0]] = pieces[1]
+
+    while isinstance(monkeys['root'], str):
+        for key in monkeys:
+            if isinstance(monkeys[key], str):
+                pieces = monkeys[key].split(" ")
+                dude1 = pieces[0]
+                oper = pieces[1]
+                dude2 = pieces[2]
+                if isinstance(monkeys[dude1], (int, float)) and isinstance(monkeys[dude2],
+                                                                           (int, float)):
+                    monkeys[key] = eval(f"{monkeys[dude1]}{oper}{monkeys[dude2]}")
+    print(monkeys)
+    ans = int(monkeys['root'])
+    print("Ag*:", ans, answer_units, error_checker(ans, 152, 85616733059734))"""
+
+    answer_units = "Number yelled by human"
+    monkeys2 = {}
+
+    humn_guess = 3560324848168  # I just did manual trial and error. Just desperate.
+
+    for line in data_pack:
+        pieces = line.split(": ")
+        try:
+            if pieces[0] == 'humn':
+                monkeys2[pieces[0]] = humn_guess
+            else:
+                monkeys2[pieces[0]] = int(pieces[1])
+        except:
+            if pieces[0] == 'root':
+                # a little hardcodey here with the +:
+                monkeys2[pieces[0]] = pieces[1].replace("+", "==")
+            else:
+                monkeys2[pieces[0]] = pieces[1]
+    # print(monkeys2)
+    pieces = monkeys2['root'].split(" ")
+    rootdude1 = pieces[0]
+    rootdude2 = pieces[2]
+
+    answer2 = 0
+    give_up = 500
+    turn = 0
+    while monkeys2[rootdude1] != monkeys2[rootdude2]:
+        turn += 1
+        for key in monkeys2:
+            if isinstance(monkeys2[key], str):
+                pieces = monkeys2[key].split(" ")
+                dude1 = pieces[0]
+                oper = pieces[1]
+                dude2 = pieces[2]
+                if isinstance(monkeys2[dude1], (int, float)) and isinstance(monkeys2[dude2],
+                                                                            (int, float)):
+                    if key == 'root' and monkeys2[dude1] == monkeys2[dude2]:
+                        answer2 = humn_guess
+                        print('Solved it!')
+                        break
+                    else:
+                        monkeys2[key] = eval(f"{monkeys2[dude1]}{oper}{monkeys2[dude2]}")
+        if turn == give_up:
+            print('Gave up!')
+            break
+
+    answer2 = humn_guess
+    if isinstance(monkeys2['root'], bool):
+        x = monkeys2[rootdude1] - monkeys2[rootdude2]
+        print("No Solution", monkeys2[rootdude1], monkeys2[rootdude2], humn_guess, 'gave', f"{x:.2e}")
+    else:
+        pieces = monkeys2['root'].split(" ")
+        dude1 = pieces[0]
+        dude2 = pieces[2]
+        print(monkeys2['root'], monkeys2[dude1] == monkeys2[dude2], monkeys2[dude1],
+              monkeys2[dude2])
+        print("Au*:", answer2, answer_units, error_checker(answer2, 301, 3560324848168))
+
+
 # run_all_days(11)
-run_one_day(20212, include_prod=True)
+run_one_day(21, include_prod=True)
