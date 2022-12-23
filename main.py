@@ -1547,6 +1547,14 @@ def move_to_a_valve(time_remaining, time_elapsed):
     time_remaining, time_elapsed = costs_a_minute(time_remaining, time_elapsed)
 
 
+def day17():
+    data_pack = import_data(day, dev_env)
+    answer_units = "rock height"
+    answer = 0
+    print("Ag*:", answer, answer_units, error_checker(answer, 3068, 6642))
+    # print("Au*:", answer, answer_units, error_checker(answer, 1, 6642))
+
+
 def day18():
     data_pack = import_data(day, dev_env)
     answer_units = "surface area"
@@ -1655,6 +1663,106 @@ def quality_level_and_answer(robot_prices):
     return running_total
 
 
+def day20():
+    # Wow, yeah. My solution is really inefficient. A circular list would've solved this in no time.
+    # This took about AN HOUR to run but got the right answer!
+    data_pack = import_data(day, dev_env)
+    answer_units = "sum of grove coordinates"
+
+    for mix in range(10):
+        mixed = mix_20(data_pack)
+
+    grove_coordinates = 0
+    for dd in [1, 2, 3]:
+        grove_coordinate = count_it_20(mixed, number_after_0=(dd * 1000))
+        # print(grove_coordinate)
+        grove_coordinates += grove_coordinate
+
+    # print("Ag*:", grove_coordinates, answer_units, error_checker(grove_coordinates, 3, 6642))
+    print("Au*:", grove_coordinates, answer_units,
+          error_checker(grove_coordinates, 1623178306, 6642))
+
+
+def count_it_20(mixed, number_after_0):
+    length = len(mixed)
+    index_0 = 0
+    for zz in range(length):
+        if mixed[zz] == 0:
+            index_0 = zz
+    move_this_many = number_after_0 % length
+    if move_this_many < length - index_0:
+        return mixed[index_0 + move_this_many]
+    else:
+        return mixed[index_0 - length + move_this_many]
+
+
+def mix_20(data_pack):
+    """The encrypted file is a list of numbers. To mix the file, move each number forward or
+    backward in the file a number of positions equal to the value of the number being moved.
+    The list is circular, so moving a number off one end of the list wraps back around to the other
+    end as if the ends were connected.
+
+    For example, to move the 1 in a sequence like 4, 5, 6, 1, 7, 8, 9, the 1 moves one position
+    forward: 4, 5, 6, 7, 1, 8, 9. To move the -2 in a sequence like 4, -2, 5, 6, 7, 8, 9, the -2
+    moves two positions backward, wrapping around: 4, 5, 6, 7, 8, -2, 9.
+
+    The numbers should be moved in the order they originally appear in the encrypted file.
+    Numbers moving around during the mixing process do not change the order in which the
+    numbers are moved."""
+    decryption_key = 811589153
+    i_index_list = []
+    length = len(data_pack)
+    for ii in range(length):
+        i_index_list.append(
+            [ii, int(data_pack[ii] * decryption_key), ii])  # [original_index, value, index_now]
+
+    for _ in range(10):  # This is so going to croak.
+        for gg in range(length):
+            # Let's just make references to the indices change and leave the overall order the same.
+            i_index_list = move_it(i_index_list, length, this_index=gg)
+            print(i_index_list)  # , "\t", mixed)
+
+    mixed = order_it(i_index_list)
+    return mixed
+
+
+def order_it(i_index_list):
+    mixed = []
+    for jj in range(len(i_index_list)):
+        for each_list in i_index_list:
+            if each_list[2] == jj:
+                mixed.append(each_list[1])
+                break
+    return mixed
+
+
+def move_it(i_index_list, length, this_index):
+    _, value, leaving_index = i_index_list[this_index]
+    if value == 0:
+        # print(f"{value} does not move:")
+        return i_index_list  # No change.
+    new_index = (value + leaving_index) % (length - 1)
+    if new_index == 0:  # Just fix this to match the example. Others used a circular list.
+        new_index = length - 1
+    # print(f"{value} moves from {leaving_index} to new index {new_index}:")
+    for nn in range(length):  # 0 thru 6...
+        old_index = i_index_list[nn][2]
+        if this_index == nn:
+            # print(f"I '{i_index_list[nn][1]}' am landing on index {new_index}")
+            i_index_list[this_index][2] = new_index
+        elif leaving_index < old_index <= new_index:  # landed on you.
+            # print(f"Shove down the '{i_index_list[nn][1]}' to index {old_index - 1}")
+            i_index_list[nn][2] = old_index - 1
+        elif new_index <= old_index <= leaving_index:  # landed on you.
+            # print(f"Push up the '{i_index_list[nn][1]}' to index {old_index + 1}")
+            i_index_list[nn][2] = old_index + 1
+        else:
+            # print(f"'{i_index_list[nn][1]}' does not move.")
+            pass
+    # print(i_index_list)
+    return i_index_list
+
+
 def day21():
     data_pack = import_data(day, dev_env)
     day21a(data_pack)
@@ -1715,5 +1823,187 @@ def day21b(data_pack, humn_guess=0):
             day21b(data_pack, humn_guess=new_humn_guess)  # Oops, recursion!
 
 
+def day22():
+    data_pack = import_data(day, dev_env)
+    answer_units = "sum of"
+    answer = 0
+
+    final_row = 6
+    final_column = 8
+    final_facing = 0
+    final_password = 1000 * final_row + final_column * 4 + final_facing
+
+    print("Ag*:", final_password, answer_units, error_checker(final_password, 6032, 6642))
+    # print("Au*:", answer, answer_units, error_checker(answer, 1, 6642))
+
+
+def day23():
+    data_pack = import_data(day, dev_env)
+    answer_units = "empty ground tiles"
+
+    """Simulate the Elves' process and find the smallest rectangle that contains the Elves after 
+    10 rounds. How many empty ground tiles does that rectangle contain?
+    """
+    rounds = 30
+    coords = format_the_data_23(data_pack)  # {elf_number: [x_coordinate, y_coordinate]}
+    elf_count = len(coords)
+    empty_tiles = 0
+    tapped_out_after = 0
+    round = 0
+    # for round in range(rounds):
+    while tapped_out_after == 0:
+        # print("Start Round", round)
+        # print_a_picture(coords)
+        coords, proposals = first_move(coords, round)
+        # print(coords)
+        # print(proposals)
+        if not proposals:
+            tapped_out_after = round + 1
+            break
+        coords = second_move(coords, proposals)
+        # print_a_picture(coords)
+        if round == 10:
+            empty_tiles = find_grid_area(coords) - elf_count  # Total area - occupied squares
+        round += 1
+
+    print("Ag*:", empty_tiles, answer_units, error_checker(empty_tiles, 110, 4068))
+    print("Au*:", tapped_out_after, "rounds until tapped out",
+          error_checker(tapped_out_after, 20, 100))
+
+
+def print_a_picture(coords):
+    grid = 20
+    printy_grid = []
+    for ii in range(grid):
+        inside = []
+        for jj in range(grid):
+            inside.append(". ")
+        printy_grid.append(inside)
+    for elf in coords:
+        x, y = coords[elf]
+        printy_grid[y + 6][x + 6] = str(elf) if elf > 9 else f"{elf} "
+    for line in printy_grid:
+        print("".join(line))
+
+
+def format_the_data_23(data_pack):
+    coords = dict()
+    elf_count = 0
+    for y_coord in range(len(data_pack)):
+        for x_coord in range(len(data_pack[y_coord])):
+            # print(data_pack[y_coord], data_pack[y_coord][x_coord], y_coord, x_coord)
+            if data_pack[y_coord][x_coord] == "#":
+                elf_count += 1
+                coords[elf_count] = [x_coord, y_coord]
+    return coords
+
+
+def find_my_8(my_coords):
+    """Find the 8 squares around you."""
+    x, y = my_coords
+    my_8 = [[x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
+            [x - 1, y], [x + 1, y],
+            [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]]
+    return my_8
+
+
+def count_find_uniques(coordo_dict):
+    # When counts are more than 1, you got collisions.
+    space_counts = dict()
+    for elf in coordo_dict:
+        space_counts[coordo_dict[elf]] = space_counts.get(coordo_dict[elf], 0) + 1
+    return space_counts
+
+
+def first_move(coords, round):
+    """During the first half of each round, each Elf considers the eight positions adjacent to
+    themself. If no other Elves are in one of those eight positions, the Elf does not do anything
+    during this round. Otherwise, the Elf looks in each of four directions in the following order
+    and proposes moving one step in the first valid direction:
+
+    If there is no Elf in the N, NE, or NW adjacent positions, the Elf proposes moving north one step.
+    If there is no Elf in the S, SE, or SW adjacent positions, the Elf proposes moving south one step.
+    If there is no Elf in the W, NW, or SW adjacent positions, the Elf proposes moving west one step.
+    If there is no Elf in the E, NE, or SE adjacent positions, the Elf proposes moving east one step.
+
+
+    my_8 = [[x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
+            [x - 1, y],                     [x + 1, y],
+            [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]]
+
+    Finally, at the end of the round, the first direction the Elves considered is moved to the
+    end of the list of directions. For example, during the second round, the Elves would try
+    proposing a move to the south first, then west, then east, then north. On the third round,
+    the Elves would first consider west, then east, then north, then south
+    """
+    # print("round=", round)
+    proposals = dict()
+    all_coordinates = list(coords.values())
+    for elf in coords:
+        # If no other Elves are in one of those eight positions, the Elf does not do anything during this round.
+        nearby_elves = [coo for coo in find_my_8(coords[elf]) if coo in all_coordinates]
+        # print(elf, nearby_elves)
+        if nearby_elves:
+            x, y = coords[elf]
+            north_places = [[x - 1, y - 1], [x, y - 1], [x + 1, y - 1]]
+            south_places = [[x - 1, y + 1], [x, y + 1], [x + 1, y + 1]]
+            west_places = [[x - 1, y - 1], [x - 1, y], [x - 1, y + 1]]
+            east_places = [[x + 1, y - 1], [x + 1, y], [x + 1, y + 1]]
+            rotato = {0: north_places,
+                      1: south_places,
+                      2: west_places,
+                      3: east_places}
+            # for dd in range(4):
+            #    print((round + dd) % 4)
+            if not [coo for coo in rotato[(round + 0) % 4] if coo in all_coordinates]:
+                proposals[elf] = rotato[(round + 0) % 4][1]  # Middle item of _places
+                continue
+            if not [coo for coo in rotato[(round + 1) % 4] if coo in all_coordinates]:
+                proposals[elf] = rotato[(round + 1) % 4][1]
+                continue
+            if not [coo for coo in rotato[(round + 2) % 4] if coo in all_coordinates]:
+                proposals[elf] = rotato[(round + 2) % 4][1]
+                continue
+            if not [coo for coo in rotato[(round + 3) % 4] if coo in all_coordinates]:
+                proposals[elf] = rotato[(round + 3) % 4][1]
+                continue
+    # print()
+    return coords, proposals
+
+
+def second_move(coords, proposals):
+    """After each Elf has had a chance to propose a move, the second half of the round can begin.
+    Simultaneously, each Elf moves to their proposed destination tile if they were the only Elf to
+    propose moving to that position. If two or more Elves propose moving to the same position,
+    none of those Elves move.
+
+    # space_counts = count_find_uniques(proposals)
+
+        #if space_counts[proposals[elf]] == 1:  # and proposals.get(
+        # elf) is not None:  # If 2 or more, the elf does not move.
+        #if not [coo for coo in proposals[elf] if coo in ]:
+    """
+    for elf in proposals:  # if no collision, them move there.
+        collision = False
+        for all_other_elves in coords:
+            if all_other_elves != elf and proposals.get(all_other_elves) == proposals[elf]:
+                collision = True
+        if not collision:
+            coords[elf] = proposals[elf]
+    return coords
+
+
+def find_grid_area(coords):
+    """To make sure they're on the right track, the Elves like to check after round 10 that they're
+    making good progress toward covering enough ground. To do this, count the number of empty
+    ground tiles contained by the smallest rectangle that contains every Elf."""
+    coords.values()
+    x_es = [g[0] for g in coords.values()]
+    y_s = [g[1] for g in coords.values()]
+    x_axis = (max(x_es) - min(x_es)) + 1
+    y_axis = (max(y_s) - min(y_s)) + 1
+    return x_axis * y_axis
+
+
 # run_all_days(11)
-run_one_day(21, include_prod=True)
+run_one_day(23, include_prod=True)
