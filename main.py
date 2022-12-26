@@ -4,7 +4,9 @@ import pprint
 from functools import reduce
 import operator
 from collections import defaultdict
+import doctest
 import math
+import ast
 import matplotlib.pyplot as plt
 
 day = 1
@@ -1335,42 +1337,13 @@ def day13():
 
     right_order_pairs = 0
     for index in range(len(transformed_data)):
-        right_order_pairs += oops_recursion(transformed_data[index][0], transformed_data[index][1])
-        # Let's return 0 for no and 1 for yes.
+        if compare_o(transformed_data[index]):  # are balanced, bool
+            print(f"Pair {index + 1}: {transformed_data[index]} are in the right order.")
+            right_order_pairs += index + 1
+        print()
 
     print("Ag*:", right_order_pairs, answer_units, error_checker(right_order_pairs, 13, "?"))
-    print("Au*:", right_order_pairs, answer_units, error_checker(right_order_pairs, 150, 2039912))
-
-
-def oops_recursion(left_side, right_side):
-    # Let's return 0 for no and 1 for yes.
-    for char in left_side:
-        pass
-        # Let's do some pseudocode instead.
-
-        # If you see a left bracket, recurse:
-
-        # If you see a right bracket, pop out one level:
-
-
-def compare_o(left_thing, right_thing):
-    if left_thing.isint() and right_thing.isint():
-        if left_thing > right_thing:
-            return 0  # Right side is smaller, so inputs are not in the right order
-        else:  # elif left_thing <= right_thing:
-            return 1
-    elif left_thing.islist() and right_thing.isint():
-        # convert
-        return compare_o(left_thing, [right_thing])
-    elif left_thing.isint() and right_thing.islist():
-        new_thing = [left_thing]
-        return compare_o(left_thing=new_thing, right_thing=right_thing)
-    elif left_thing.islist() and right_thing.islist():
-        for in_index in range(len(left_thing)):
-            try:
-                return compare_o(left_thing[in_index], right_thing[in_index])
-            except IndexError:  # Right side ran out of items, so inputs are not in the right order
-                return 0
+    # print("Au*:", right_order_pairs, answer_units, error_checker(right_order_pairs, 150, 2039912))
 
 
 def transform_data(data_pack):
@@ -1378,17 +1351,83 @@ def transform_data(data_pack):
     pairs = []
     for line in data_pack:
         if line:
+            line = ast.literal_eval(line)  # Oh shit, this worked a damn dreaam!
             pairs.append(line)
         else:
             transformed_data.append(pairs)
             pairs = []
+    transformed_data.append(pairs)
     return transformed_data
+
+
+def compare_o(compare_these_pairs):
+    """
+    If both values are integers, the lower integer should come first.
+    If the left integer is lower than the right integer, the inputs are in the right order.
+    If the left integer is higher than the right integer, the inputs are not in the right order.
+    Otherwise, the inputs are the same integer; continue checking the next part of the input.
+
+    If both values are lists, compare the first value of each list, then the second value, and so on
+    If the left list runs out of items first, the inputs are in the right order.
+    If the right list runs out of items first, the inputs are not in the right order.
+    If the lists are the same length and no comparison makes a decision about the order,
+    continue checking the next part of the input.
+
+    If exactly one value is an integer, convert the integer to a list which contains that integer
+    as its only value, then retry the comparison.
+    For example, if comparing [0,0,0] and 2, convert the right value to [2] (a list containing 2);
+    the result is then found by instead comparing [0,0,0] and [2].
+    """
+    left_thing, right_thing = compare_these_pairs
+    print(f'IN: Comparing {left_thing} and {right_thing}')
+    most_members = max(len(left_thing), len(right_thing))
+    for ii in range(most_members):
+        try:
+            print(f"len iter = {ii}: left_thing={left_thing[ii]}, right_thing={right_thing[ii]}")
+            if isinstance(left_thing[ii], int) and isinstance(right_thing[ii], int):
+                if left_thing[ii] > right_thing[ii]:
+                    print(
+                        f"OUT: {left_thing[ii]}>{right_thing[ii]}, so inputs are not in the right order")
+                    return False
+                elif left_thing[ii] < right_thing[ii]:
+                    print(
+                        f"OUT: {left_thing[ii]}<{right_thing[ii]}, so inputs are in the right order")
+                    return True
+                # else:
+                #    return compare_o(compare_these_pairs=compare_these_pairs)
+            elif isinstance(left_thing[ii], list) and isinstance(right_thing[ii], list):
+                print("DOWN: Both lists; Diving in one level")
+                return compare_o(compare_these_pairs=[left_thing[ii], right_thing[ii]])
+            elif isinstance(left_thing[ii], int) and isinstance(right_thing[ii], list):
+                print(f"DOWN: Transform {left_thing[ii]} into [{left_thing[ii]}]; recompare.")
+                return compare_o(compare_these_pairs=[[left_thing[ii]], right_thing[ii]])
+            elif isinstance(left_thing[ii], list) and isinstance(right_thing[ii], int):
+                print(f"DOWN: Transform {right_thing[ii]} into [{right_thing[ii]}]; recompare.")
+                return compare_o(compare_these_pairs=[left_thing[ii], [right_thing[ii]]])
+        except IndexError:  # Right side ran out of items, so inputs are not in the right order
+            if len(left_thing) > len(right_thing):
+                print("OUT: Right side ran out of items, so inputs are not in the right order")
+                return False
+            elif len(left_thing) < len(right_thing):
+                print("OUT: Left side ran out of items, so inputs are in the right order")
+                return True
+
+
+def compare_o2(compare_these_pairs):
+    left_thing, right_thing = compare_these_pairs
+    # print(f'IN: Comparing {left_thing} and {right_thing}')
+    most_members = max(len(left_thing), len(right_thing))
+    # for ii in range(most_members):
+    try:
+        print(f"left_thing={left_thing[0]}, right_thing={right_thing[0]}")
+    except IndexError:
+        print("Oops")
 
 
 def day14():
     data_pack = import_data(day, dev_env)
     answer_units = "sand grains"
-
+    answer = 0
     print("Ag*:", answer, answer_units, error_checker(answer, 24, 6642))
     print("Au*:", answer, answer_units, error_checker(answer, 1, 6642))
 
@@ -2005,5 +2044,137 @@ def find_grid_area(coords):
     return x_axis * y_axis
 
 
+def day24():
+    data_pack = import_data(day, dev_env)
+    answer_units = "blizzard moves"
+    answer = 0
+
+    print("Ag*:", answer, answer_units, error_checker(answer, 18, "?"))
+    print("Au*:", answer, "rounds until tapped out", error_checker(answer, "?", "?"))
+
+
+def day25():
+    data_pack = import_data(day, dev_env)
+    answer_units = "SNAFU number"
+    doctest.testmod()
+    decimals = []
+    for ii in data_pack:
+        decimal = convert_from_snafu(snafu=ii)
+        decimals.append(decimal)
+    snafu = convert_to_snafu(decimal=sum(decimals))
+    print("Ag*:", snafu, answer_units, error_checker(snafu, '2=-1=0', "2-==10===-12=2-1=-=0"))
+
+
+def convert_from_snafu(snafu):
+    """
+    Say you have the SNAFU number 2=01.
+    That's 2 in the 625s place, = (double-minus) in the 125s place, - (minus) in the 25s place,
+    0 in the 5s place, and 1 in the 1s place.
+    (2 times 625) plus (-2 times 125) plus (-1 times 25) plus (0 times 5) plus (1 times 1).
+    That's 1250 plus -250 plus -25 plus 0 plus 1. 976!
+
+    >>> convert_from_snafu("20")
+    10
+    >>> convert_from_snafu("2=-01")
+    976
+    >>> convert_from_snafu("1=-0-2")
+    1747
+    >>> convert_from_snafu("12111")
+    906
+    >>> convert_from_snafu("2=0=")
+    198
+    >>> convert_from_snafu("21")
+    11
+    >>> convert_from_snafu("2=01")
+    201
+    >>> convert_from_snafu("111")
+    31
+    >>> convert_from_snafu("20012")
+    1257
+    >>> convert_from_snafu("112")
+    32
+    >>> convert_from_snafu("1=-1=")
+    353
+    >>> convert_from_snafu("1-12")
+    107
+    >>> convert_from_snafu("12")
+    7
+    >>> convert_from_snafu("1=")
+    3
+    >>> convert_from_snafu("122")
+    37
+    """
+    decimal = 0
+    places = len(snafu)
+    for index in range(places):
+        multi = 5 ** (places - index - 1)
+        resident = snafu[index]
+        try:
+            decimal += int(resident) * multi
+        except ValueError:
+            if resident == "=":
+                decimal += multi * -2
+            elif resident == "-":
+                decimal += multi * -1
+    return decimal
+
+
+def convert_to_snafu(decimal):
+    """
+    You know how starting on the right, normal numbers have a ones place, a tens place, a hundreds
+    place, and so on, where the digit in each place tells you how many of that value you have?"
+
+    SNAFU works the same way, except it uses powers of five instead of ten.
+    Starting from the right, you have a ones place, a fives place, a twenty-fives place,
+    a one-hundred-and-twenty-fives place, and so on. It's that easy!"
+
+    You ask why some of the digits look like - or = instead of "digits".
+    You know, I never did ask the engineers why they did that.
+    Instead of using digits four through zero, the digits are 2, 1, 0, minus (written -),
+    and double-minus (written =). Minus is worth -1, and double-minus is worth -2."
+
+    So, because ten (in normal numbers) is two fives and no ones, in SNAFU it is written 20.
+    Since eight (in normal numbers) is two fives minus two ones, it is written 2=."
+
+    >>> convert_to_snafu(4890)
+    '2=-1=0'
+    >>> convert_to_snafu(1747)
+    '1=-0-2'
+    >>> convert_to_snafu(906)
+    '12111'
+    >>> convert_to_snafu(198)
+    '2=0='
+    >>> convert_to_snafu(11)
+    '21'
+    >>> convert_to_snafu(201)
+    '2=01'
+    >>> convert_to_snafu(31)
+    '111'
+    >>> convert_to_snafu(1257)
+    '20012'
+    >>> convert_to_snafu(32)
+    '112'
+    >>> convert_to_snafu(353)
+    '1=-1='
+    >>> convert_to_snafu(107)
+    '1-12'
+    >>> convert_to_snafu(7)
+    '12'
+    >>> convert_to_snafu(3)
+    '1='
+    >>> convert_to_snafu(37)
+    '122'
+    """
+    snafu = ""
+    while decimal > 0:
+        # Had to look at https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=seti&wt=none&l=python&width=680&ds=true&dsyoff=20px&dsblur=68px&wc=true&wa=true&pv=56px&ph=56px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=from%2520functools%2520import%2520reduce%250A%250Adef%2520SNAFUtoDec%28num%29%253A%250A%2520%2520%2520%2520return%2520reduce%28%250A%2520%2520%2520%2520%2520%2520%2520%2520lambda%2520r%252C%2520v%253A%2520%28%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520r%255B0%255D%2520%252B%2520%28%2522%253D-012%2522.index%28v%29%2520-%25202%29*%2520r%255B1%255D%252C%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520r%255B1%255D%2520*%25205%252C%250A%2520%2520%2520%2520%2520%2520%2520%2520%29%252C%250A%2520%2520%2520%2520%2520%2520%2520%2520num%255B%253A%253A-1%255D%252C%250A%2520%2520%2520%2520%2520%2520%2520%2520%280%252C%25201%29%252C%250A%2520%2520%2520%2520%29%255B0%255D%250A%250Adef%2520DecToSNAFU%28num%29%253A%2520%2523%2520assume%2520non-zero%250A%2520%2520%2520%2520res%2520%253D%2520%255B%255D%250A%2520%2520%2520%2520while%2520num%2520%253E%25200%253A%250A%2520%2520%2520%2520%2520%2520%2520%2520res.append%28%2522012%253D-%2522%255Bnum%2520%2525%25205%255D%29%250A%2520%2520%2520%2520%2520%2520%2520%2520num%2520%253D%2520%282%2520%252B%2520num%29%2520%252F%252F%25205%250A%2520%2520%2520%2520return%2520%27%27.join%28res%255B%253A%253A-1%255D%29%250A%250Aprint%2520%28DecToSNAFU%28sum%28SNAFUtoDec%28l%29%2520for%2520l%2520in%2520open%280%29.read%28%29.splitlines%28%29%29%29%29
+        snafu += "012=-"[decimal % 5]
+        # so, dec = 3:  "012=-"[3] == '=', corresponds to -2    5-2=3   so, = in the ones place.
+        decimal = (2 + decimal) // 5
+        # the floor division // rounds the result down to the nearest whole number:
+        # 3+2 = 5    and  5//5=1   so, go around again with decimal=1
+    return snafu[::-1]  # Print it backwards ('=1' that we assembled becomes '1=')
+
+
 # run_all_days(11)
-run_one_day(23, include_prod=True)
+run_one_day(25, include_prod=True)
